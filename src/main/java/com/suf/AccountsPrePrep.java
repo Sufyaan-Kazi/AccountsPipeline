@@ -17,6 +17,9 @@
  */
 package com.suf;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -57,6 +60,7 @@ import org.apache.beam.sdk.values.PCollection;
  * on a distributed service, you would use an appropriate file service.
  */
 public class AccountsPrePrep {
+
         static class FilterTransactionsFn extends DoFn<String, String> {
                 private static final long serialVersionUID = 1L;
 
@@ -81,11 +85,17 @@ public class AccountsPrePrep {
                 @ProcessElement
                 public void processElement(@Element String transactionData, OutputReceiver<String> receiver) {
                         StarlingTransaction starlingTrans = new StarlingTransaction(transactionData);
+
+                        // Set category (may be null if no match found)
+                        starlingTrans.setCategory(Desc2CategoryMap.INSTANCE.getCategoryForDesc(starlingTrans.getWho()));
                         receiver.output(starlingTrans.toString());
                 }
         }
 
         public static void main(String[] args) {
+
+                // Initialise map
+                AccountsPrePrep prep = new AccountsPrePrep();
 
                 // Create a PipelineOptions object. This object lets us set various execution
                 // options for our pipeline, such as the runner you wish to use. This example
@@ -101,7 +111,7 @@ public class AccountsPrePrep {
                                 // Filter out unnecessary rows
                                 .apply(ParDo.of(new FilterTransactionsFn()));
 
-                // Work out the cetegory
+                // Work out the craetegory
                 PCollection<String> pojos = filteredTransaction.apply(ParDo.of(new WorkOutCategoryFn()));
 
                 // write output

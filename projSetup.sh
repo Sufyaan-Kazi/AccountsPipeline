@@ -13,7 +13,7 @@ main() {
   SERVICE_ACC=$KEY_NAME@$PROJECT_ID
   BUCKET_NAME=sufaccountdata
 
-  #gcloud config set project $PROJECT_ID
+  gcloud config set project $PROJECT_ID
   enableAPIS
   createServiceAccount
 
@@ -57,6 +57,8 @@ createServiceAccount() {
 
     #Store the key in env variable
     export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
+
+    echo ${GOOGLE_APPLICATION_CREDENTIALS}
   fi
 }
 

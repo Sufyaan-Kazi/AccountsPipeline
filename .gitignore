@@ -23,3 +23,9 @@
 hs_err_pid*
 .vscode/settings.json
 Acc.code-workspace
+
+#Misc
+.classpath
+.project
+.settings/
+target/

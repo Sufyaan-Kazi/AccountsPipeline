@@ -6,16 +6,12 @@ main() {
 
   SECONDS=0
 
-  PROJECT_ID=`gcloud config list project --format "value(core.project)"`
-  KEY_NAME=dflow-accounts
-  KEY_FILE=${KEY_NAME}.json
-  KEY_DIR=/home/sufyaankazi/keys/
-  SERVICE_ACC=$KEY_NAME@$PROJECT_ID
-  BUCKET_NAME=sufaccountdata
+  . ./vars.txt
 
-  gcloud config set project $PROJECT_ID
+  #gcloud config set project $PROJECT_ID
   enableAPIS
   createServiceAccount
+  createBQDataset
 
   #gsutil mb ${BUCKET_NAME}
 
@@ -32,6 +28,12 @@ abort()
   '
   echo "An error occurred. Exiting..." >&2
   exit 1
+}
+
+## Create the Big Query dataset
+createBQDataset(){
+  bq mk ${DATASET}
+  bq mk ${DATASET}.${STARLING_TABLE}
 }
 
 ## Create the Service accounts
@@ -77,6 +79,11 @@ enableAPIS() {
       gcloud services enable "${api}.googleapis.com"
     fi
   done
+}
+
+runBQCommand() {
+   bq $@
+   sleep 2
 }
 
 main

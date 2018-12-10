@@ -1,0 +1,8 @@
+PROJECT_ID=`gcloud config list project --format "value(core.project)"`
+KEY_NAME=dflow-accounts
+KEY_FILE=${KEY_NAME}.json
+KEY_DIR=/home/sufyaankazi/keys/
+SERVICE_ACC=$KEY_NAME@$PROJECT_ID
+BUCKET_NAME=sufaccountdata
+DATASET=sufbanking
+STARLING_TABLE=starlingtxns

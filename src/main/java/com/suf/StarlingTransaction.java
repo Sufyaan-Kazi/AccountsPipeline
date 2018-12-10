@@ -1,17 +1,26 @@
 package com.suf;
 
+import java.io.Serializable;
 import java.io.StringReader;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
+import com.google.api.services.bigquery.model.TableFieldSchema;
+import com.google.api.services.bigquery.model.TableSchema;
+
+import org.apache.beam.sdk.coders.AtomicCoder;
 import org.apache.beam.sdk.coders.DefaultCoder;
 import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-@DefaultCoder(SerializableCoder.class)
-public class StarlingTransaction {
+@DefaultCoder(AtomicCoder.class)
+public class StarlingTransaction implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private Date when = null;
     private String who = null;
     private String what = null;
@@ -28,14 +37,11 @@ public class StarlingTransaction {
         this();
 
         StringReader csvReader = null;
+        CSVParser parser = null;
         try {
             csvReader = new StringReader(csv);
-            CSVRecord rec = (new CSVParser(csvReader, CSVFormat.DEFAULT)).iterator().next();
-
-            // System.out.println("Splitting: " + csv);
-            // for (int i = 0; i < rec.size(); i++) {
-            // System.out.println(rec.get(i));
-            // }
+            parser = new CSVParser(csvReader, CSVFormat.DEFAULT);
+            CSVRecord rec = parser.iterator().next();
 
             SimpleDateFormat ft = new SimpleDateFormat("dd/MM/yyyy");
             this.setWhen(ft.parse(rec.get(0)));
@@ -51,12 +57,35 @@ public class StarlingTransaction {
             if (csvReader != null) {
                 try {
                     csvReader.close();
-                    csvReader = null;
                 } catch (Exception e) {
+                } finally {
+                    csvReader = null;
+                }
+            }
+
+            if (parser != null) {
+                try {
+                    parser.close();
+                } catch (Exception e) {
+                } finally {
+                    parser = null;
                 }
             }
         }
+    }
 
+    public static TableSchema getBQSchema() {
+        List<TableFieldSchema> fields = new ArrayList<>();
+        fields.add(new TableFieldSchema().setName("when").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("what").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("who").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("type").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("category").setType("STRING"));
+        fields.add(new TableFieldSchema().setName("amount").setType("FLOAT"));
+        fields.add(new TableFieldSchema().setName("balnace").setType("FLOAT"));
+        TableSchema schema = new TableSchema().setFields(fields);
+
+        return schema;
     }
 
     @Override

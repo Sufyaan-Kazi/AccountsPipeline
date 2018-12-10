@@ -1,8 +1,10 @@
-PROJECT_ID=`gcloud config list project --format "value(core.project)"`
+PROJECT_ID=$(gcloud config list project --format "value(core.project)")
 KEY_NAME=dflow-accounts
 KEY_FILE=${KEY_NAME}.json
 KEY_DIR=/home/sufyaankazi/keys/
 SERVICE_ACC=$KEY_NAME@$PROJECT_ID
+SERVICE_ACC_ROLES="roles/storage.objectCreator roles/storage.objectViewer roles/bigquery.dataEditor roles/bigquery.jobUser"
 BUCKET_NAME=sufaccountdata
-DATASET=sufbanking
+DATASET=sufbankingds
 STARLING_TABLE=starlingtxns
+DATE=$(date '+%Y%m%d%H:%M:%S')

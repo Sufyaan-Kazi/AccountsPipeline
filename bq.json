@@ -1,0 +1,31 @@
+{
+  "access": [
+    {
+      "role": "WRITER", 
+      "specialGroup": "projectWriters"
+    }, 
+    {
+      "role": "WRITER",
+      "userByEmail": "SERVICE_ACC.iam.gserviceaccount.com"
+    },
+    {
+      "role": "OWNER", 
+      "specialGroup": "projectOwners"
+    }, 
+    {
+      "role": "OWNER", 
+      "userByEmail": "sufyaankazi@google.com"
+    }, 
+    {
+      "role": "READER", 
+      "specialGroup": "projectReaders"
+    }
+  ], 
+  "datasetReference": {
+    "datasetId": "DATASET", 
+    "projectId": "PROJECT_ID"
+  }, 
+  "id": "DATASET:TABLE", 
+  "kind": "bigquery#dataset", 
+  "selfLink": "https://www.googleapis.com/bigquery/v2/projects/PROJECT_ID/datasets/DATASET"
+}

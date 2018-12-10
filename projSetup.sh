@@ -2,23 +2,18 @@
 set -e
 
 main() {
-  trap 'abort' 0
-
-  SECONDS=0
-
+  # Read in Vars
   . ./vars.txt
 
-  #gcloud config set project $PROJECT_ID
+  # Do stuff
   enableAPIS
   createServiceAccount
   createBQDataset
-
-  #gsutil mb ${BUCKET_NAME}
-
-  trap : 0
-  echo "Project Setup Complete in ${SECONDS} seconds."
 }
 
+#
+# Handle an error in the script
+#
 abort()
 {
   echo >&2 '
@@ -30,15 +25,32 @@ abort()
   exit 1
 }
 
+#
 ## Create the Big Query dataset
+#
 createBQDataset(){
-  bq mk ${DATASET}
-  bq mk ${DATASET}.${STARLING_TABLE}
+## Create the dataset and table
+  bq mk --location europe-west2 -d ${DATASET}
+  bq mk -t ${DATASET}.${STARLING_TABLE}
+
+  # Give the service account permission on the dataset using the generic file
+  # Use sed to replace generic param text with the runtime variables
+  sed -e 's/DATASET/'"${DATASET}"'/g' bq.json | sed -e 's/SERVICE_ACC/'"${SERVICE_ACC}"'/g' | sed -e 's/PROJECT_ID/'"${PROJECT_ID}"'/g' | sed -e 's/TABLE/'"${STARLING_TABLE}"'/g' > bq_${DATE}.json
+  bq update --source ./bq_${DATE}.json ${PROJECT_ID}:${DATASET}
+
+  # Tidy up
+  rm bq_${DATE}.json
+  bq show --format=prettyjson ${DATASET}
 }
 
+#
 ## Create the Service accounts
+#
 createServiceAccount() {
+  # Check if the service account exists or not?
   SERVICE_ACC_EXISTS=$(gcloud iam service-accounts list | grep ${KEY_FILE} | wc -l)
+
+  ## Otherwise
   if [ ${SERVICE_ACC_EXISTS} -eq 0 ]
   then
     #Create the service account
@@ -46,9 +58,10 @@ createServiceAccount() {
     gcloud iam service-accounts create ${KEY_NAME} --display-name=${KEY_NAME}
 
     # Add Role Policy Bindings
-    declare -a roles=("roles/storage.objectCreator" "roles/storage.objectViewer")
+    declare -a roles=(${SERVICE_ACC_ROLES})
     for role in "${roles[@]}"
     do
+      echo "Adding role: ${role} to service account $SERVICE_ACC"
       gcloud projects add-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet
     done
 
@@ -81,9 +94,8 @@ enableAPIS() {
   done
 }
 
-runBQCommand() {
-   bq $@
-   sleep 2
-}
-
+trap 'abort' 0
+SECONDS=0
 main
+trap : 0
+echo "Project Setup Complete in ${SECONDS} seconds."

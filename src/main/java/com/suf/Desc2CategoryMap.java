@@ -64,7 +64,7 @@ public class Desc2CategoryMap {
     desc2CategoryMap.put("petrol ", Categories.FUEL);
     desc2CategoryMap.put("dental ", Categories.HEALTH);
     desc2CategoryMap.put("netflix ", Categories.TV);
-    desc2CategoryMap.put("sky ", Categories.tv);
+    desc2CategoryMap.put("sky ", Categories.TV);
     desc2CategoryMap.put("lidl ", Categories.GROCERIES);
     desc2CategoryMap.put("post office ", Categories.POSTAGE);
     desc2CategoryMap.put("collectplus ", Categories.POSTAGE);

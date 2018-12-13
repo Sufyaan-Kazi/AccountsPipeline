@@ -72,16 +72,24 @@ public class StarlingTransaction implements Serializable {
         }
     }
 
+    // private static Date getDateWithoutTime(Date aDate) {
+    // Calendar cal = Calendar.getInstance();
+    // cal.setTime(aDate);
+
+    // return new Date(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1,
+    // cal.get(Calendar.DAY_OF_MONTH));
+    // }
+
     public static TableSchema getBQSchema() {
         if (schema == null) {
             List<TableFieldSchema> fields = new ArrayList<>();
-            fields.add(new TableFieldSchema().setName("when").setType("DATE"));
+            fields.add(new TableFieldSchema().setName("when").setType("TIMESTAMP"));
             fields.add(new TableFieldSchema().setName("what").setType("STRING"));
             fields.add(new TableFieldSchema().setName("who").setType("STRING"));
             fields.add(new TableFieldSchema().setName("type").setType("STRING"));
             fields.add(new TableFieldSchema().setName("category").setType("STRING"));
             fields.add(new TableFieldSchema().setName("amount").setType("FLOAT"));
-            fields.add(new TableFieldSchema().setName("balnace").setType("FLOAT"));
+            fields.add(new TableFieldSchema().setName("balance").setType("FLOAT"));
             schema = new TableSchema().setFields(fields);
         }
 

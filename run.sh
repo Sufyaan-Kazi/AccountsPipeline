@@ -14,7 +14,7 @@ maven_runner=dataflow-runner
 runner=DataflowRunner
 zone=europe-west2-c
 
-mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --runner=$runner --tempLocation=gs://suftempbucket/staging --region=$region --zone=$zone"
+mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --runner=$runner --tempLocation=gs://suftempbucket/staging --region=$region --zone=$zone --numWorkers=1"
 #mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --tempLocation=gs://suftempbucket/staging"
 
 trap : 0

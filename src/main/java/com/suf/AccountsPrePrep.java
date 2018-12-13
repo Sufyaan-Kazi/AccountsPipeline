@@ -103,6 +103,7 @@ public class AccountsPrePrep {
                 @ProcessElement
                 public void processElement(ProcessContext c) throws Exception {
                         TableRow row = new TableRow();
+
                         row.set("when", c.element().getWhen());
                         row.set("what", c.element().getWhat());
                         row.set("who", c.element().getWho());
@@ -110,6 +111,7 @@ public class AccountsPrePrep {
                         row.set("type", c.element().getType());
                         row.set("amount", c.element().getAmount());
                         row.set("balance", c.element().getBalance());
+
                         c.output(row);
                 }
         }

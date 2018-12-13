@@ -103,14 +103,13 @@ public class AccountsPrePrep {
                 @ProcessElement
                 public void processElement(ProcessContext c) throws Exception {
                         TableRow row = new TableRow();
-                        StarlingTransaction sTrans = c.element();
-                        row.set("when", sTrans.getWhen());
-                        row.set("what", sTrans.getWhat());
-                        row.set("who", sTrans.getWho());
-                        row.set("category", sTrans.getCategory());
-                        row.set("type", sTrans.getType());
-                        row.set("amount", sTrans.getAmount());
-                        row.set("balance", sTrans.getBalance());
+                        row.set("when", c.element().getWhen());
+                        row.set("what", c.element().getWhat());
+                        row.set("who", c.element().getWho());
+                        row.set("category", c.element().getCategory());
+                        row.set("type", c.element().getType());
+                        row.set("amount", c.element().getAmount());
+                        row.set("balance", c.element().getBalance());
                         c.output(row);
                 }
         }
@@ -134,8 +133,8 @@ public class AccountsPrePrep {
                 // options for our pipeline, such as the runner you wish to use. This example
                 // will run with the DirectRunner by default, based on the class path configured
                 // in its dependencies.
-                PipelineOptions options = PipelineOptionsFactory.create();
-                options.setTempLocation("gs://suftempbucket/");
+                PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
+                // options.setTempLocation("gs://suftempbucket/");
 
                 // Create the Pipeline object with the options we defined above
                 Pipeline p = Pipeline.create(options);
@@ -152,16 +151,16 @@ public class AccountsPrePrep {
                 PCollection<StarlingTransaction> pojos = filteredTransaction.apply("GetCategory",
                                 ParDo.of(new WorkOutCategoryFn()));
 
+                // write text output
+                PCollection<String> strData = pojos.apply("GetStringVersion", ParDo.of(new MapToStringFn()));
+                strData.apply("WriteToDisk", TextIO.write().to("gs://sufbankdata/output/accounts").withSuffix(".csv"));
+
                 // write to BQ
                 PCollection<TableRow> tblRows = pojos.apply("MapToTableRow", ParDo.of(new MapToTableRowFn()));
                 tblRows.apply("WriteToBQ",
                                 BigQueryIO.writeTableRows().to("sufaccounts:sufbankingds.starlingtxns")
-                                                .withSchema(StarlingTransaction.getBQSchema())
-                                                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_APPEND));
-
-                // write text output
-                PCollection<String> strData = pojos.apply("GetStringVersion", ParDo.of(new MapToStringFn()));
-                strData.apply("WriteToDisk", TextIO.write().to("output/accountdata").withSuffix(".csv"));
+                                                .withSchema(StarlingTransaction.getBQSchema()).withCreateDisposition(
+                                                                BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
 
                 // Run
                 p.run().waitUntilFinish();

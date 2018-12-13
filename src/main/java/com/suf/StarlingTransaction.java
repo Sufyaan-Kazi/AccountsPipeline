@@ -10,16 +10,15 @@ import java.util.List;
 import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableSchema;
 
-import org.apache.beam.sdk.coders.AtomicCoder;
-import org.apache.beam.sdk.coders.DefaultCoder;
-import org.apache.beam.sdk.coders.SerializableCoder;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
-@DefaultCoder(AtomicCoder.class)
+//@DefaultCoder(AtomicCoder.class)
 public class StarlingTransaction implements Serializable {
     private static final long serialVersionUID = 1L;
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+    private static TableSchema schema = null;
 
     private Date when = null;
     private String who = null;
@@ -43,8 +42,7 @@ public class StarlingTransaction implements Serializable {
             parser = new CSVParser(csvReader, CSVFormat.DEFAULT);
             CSVRecord rec = parser.iterator().next();
 
-            SimpleDateFormat ft = new SimpleDateFormat("dd/MM/yyyy");
-            this.setWhen(ft.parse(rec.get(0)));
+            this.setWhen(sdf.parse(rec.get(0)));
             this.setWhat(rec.get(1));
             this.setWho(rec.get(2));
             this.setType(rec.get(3));
@@ -75,15 +73,17 @@ public class StarlingTransaction implements Serializable {
     }
 
     public static TableSchema getBQSchema() {
-        List<TableFieldSchema> fields = new ArrayList<>();
-        fields.add(new TableFieldSchema().setName("when").setType("STRING"));
-        fields.add(new TableFieldSchema().setName("what").setType("STRING"));
-        fields.add(new TableFieldSchema().setName("who").setType("STRING"));
-        fields.add(new TableFieldSchema().setName("type").setType("STRING"));
-        fields.add(new TableFieldSchema().setName("category").setType("STRING"));
-        fields.add(new TableFieldSchema().setName("amount").setType("FLOAT"));
-        fields.add(new TableFieldSchema().setName("balnace").setType("FLOAT"));
-        TableSchema schema = new TableSchema().setFields(fields);
+        if (schema == null) {
+            List<TableFieldSchema> fields = new ArrayList<>();
+            fields.add(new TableFieldSchema().setName("when").setType("DATE"));
+            fields.add(new TableFieldSchema().setName("what").setType("STRING"));
+            fields.add(new TableFieldSchema().setName("who").setType("STRING"));
+            fields.add(new TableFieldSchema().setName("type").setType("STRING"));
+            fields.add(new TableFieldSchema().setName("category").setType("STRING"));
+            fields.add(new TableFieldSchema().setName("amount").setType("FLOAT"));
+            fields.add(new TableFieldSchema().setName("balnace").setType("FLOAT"));
+            schema = new TableSchema().setFields(fields);
+        }
 
         return schema;
     }

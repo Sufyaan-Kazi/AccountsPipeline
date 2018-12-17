@@ -20,10 +20,6 @@ package com.suf;
 import com.google.api.services.bigquery.model.TableRow;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.coders.AtomicCoder;
-import org.apache.beam.sdk.coders.BigEndianIntegerCoder;
-import org.apache.beam.sdk.coders.CoderRegistry;
-import org.apache.beam.sdk.coders.FloatCoder;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptions;
@@ -65,6 +61,14 @@ import org.apache.beam.sdk.values.PCollection;
  */
 public class AccountsPrePrep {
 
+        private static void log(Object o) {
+                if (o == null) {
+                        return;
+                }
+
+                System.out.println(o.toString());
+        }
+
         static class FilterTransactionsFn extends DoFn<String, String> {
                 private static final long serialVersionUID = 1L;
 
@@ -75,6 +79,11 @@ public class AccountsPrePrep {
                         }
 
                         if (transactionData.startsWith(",")) {
+                                return;
+                        }
+
+                        /* Temp */
+                        if (transactionData.indexOf("Google") > -1 && transactionData.indexOf("PRD  ") > -1) {
                                 return;
                         }
 
@@ -92,7 +101,8 @@ public class AccountsPrePrep {
                         StarlingTransaction starlingTrans = new StarlingTransaction(transactionData);
 
                         // Set category (may be null if no match found)
-                        starlingTrans.setCategory(Desc2CategoryMap.INSTANCE.getCategoryForDesc(starlingTrans.getWho()));
+                        starlingTrans.setCategory(Desc2CategoryMap.INSTANCE.getCategoryForDesc(starlingTrans));
+                        // log("Category has been set to: " + starlingTrans.getCategory());
                         receiver.output(starlingTrans);
                 }
         }
@@ -104,7 +114,7 @@ public class AccountsPrePrep {
                 public void processElement(ProcessContext c) throws Exception {
                         TableRow row = new TableRow();
 
-                        row.set("when", c.element().getWhen());
+                        row.set("when", c.element().getWhen().toString());
                         row.set("what", c.element().getWhat());
                         row.set("who", c.element().getWho());
                         row.set("category", c.element().getCategory());
@@ -159,10 +169,10 @@ public class AccountsPrePrep {
 
                 // write to BQ
                 PCollection<TableRow> tblRows = pojos.apply("MapToTableRow", ParDo.of(new MapToTableRowFn()));
-                tblRows.apply("WriteToBQ",
-                                BigQueryIO.writeTableRows().to("sufaccounts:sufbankingds.starlingtxns")
-                                                .withSchema(StarlingTransaction.getBQSchema()).withCreateDisposition(
-                                                                BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED));
+                tblRows.apply("WriteToBQ", BigQueryIO.writeTableRows().to("sufaccounts:sufbankingds.starlingtxns")
+                                .withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
 
                 // Run
                 p.run().waitUntilFinish();

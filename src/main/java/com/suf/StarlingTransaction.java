@@ -2,9 +2,7 @@ package com.suf;
 
 import java.io.Serializable;
 import java.io.StringReader;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import com.google.api.services.bigquery.model.TableFieldSchema;
@@ -13,14 +11,15 @@ import com.google.api.services.bigquery.model.TableSchema;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.joda.time.LocalDate;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
-//@DefaultCoder(AtomicCoder.class)
 public class StarlingTransaction implements Serializable {
     private static final long serialVersionUID = 1L;
-    private static final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-    private static TableSchema schema = null;
+    private static final DateTimeFormatter fmt = DateTimeFormat.forPattern("dd/MM/yyyy");
 
-    private Date when = null;
+    private LocalDate when = null;
     private String who = null;
     private String what = null;
     private String type = null;
@@ -42,7 +41,7 @@ public class StarlingTransaction implements Serializable {
             parser = new CSVParser(csvReader, CSVFormat.DEFAULT);
             CSVRecord rec = parser.iterator().next();
 
-            this.setWhen(sdf.parse(rec.get(0)));
+            this.setWhen(LocalDate.parse(rec.get(0), fmt));
             this.setWhat(rec.get(1));
             this.setWho(rec.get(2));
             this.setType(rec.get(3));
@@ -72,40 +71,15 @@ public class StarlingTransaction implements Serializable {
         }
     }
 
-    // private static Date getDateWithoutTime(Date aDate) {
-    // Calendar cal = Calendar.getInstance();
-    // cal.setTime(aDate);
-
-    // return new Date(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1,
-    // cal.get(Calendar.DAY_OF_MONTH));
-    // }
-
-    public static TableSchema getBQSchema() {
-        if (schema == null) {
-            List<TableFieldSchema> fields = new ArrayList<>();
-            fields.add(new TableFieldSchema().setName("when").setType("TIMESTAMP"));
-            fields.add(new TableFieldSchema().setName("what").setType("STRING"));
-            fields.add(new TableFieldSchema().setName("who").setType("STRING"));
-            fields.add(new TableFieldSchema().setName("type").setType("STRING"));
-            fields.add(new TableFieldSchema().setName("category").setType("STRING"));
-            fields.add(new TableFieldSchema().setName("amount").setType("FLOAT"));
-            fields.add(new TableFieldSchema().setName("balance").setType("FLOAT"));
-            schema = new TableSchema().setFields(fields);
-        }
-
-        return schema;
-    }
-
     @Override
     public String toString() {
         StringBuffer str = new StringBuffer();
 
         str.append(getWhen()).append(",").append(getWho()).append(",").append(getWhat()).append(",");
         if (getCategory() != null) {
-            str.append(getCategory()).append(",");
+            str.append(getCategory());
         }
-
-        str.append(getAmount()).append(",").append(getBalance());
+        str.append(",").append(getAmount()).append(",").append(getBalance());
 
         return str.toString();
     }
@@ -129,14 +103,14 @@ public class StarlingTransaction implements Serializable {
     /**
      * @return String return the when
      */
-    public Date getWhen() {
+    public LocalDate getWhen() {
         return when;
     }
 
     /**
      * @param when the when to set
      */
-    public void setWhen(Date when) {
+    public void setWhen(LocalDate when) {
         this.when = when;
     }
 

@@ -29,6 +29,7 @@ public class Categories {
   public static final String INSURANCE = "INSURANCE";
   public static final String BILLS = "BILLS";
   public static final String HOLIDAY = "HOLIDAY";
+  public static final String CCARD = "CCARD";
 
   private Categories() {
     super();

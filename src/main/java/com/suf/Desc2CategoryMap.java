@@ -22,6 +22,7 @@ public class Desc2CategoryMap {
     desc2CategoryMap.put("waitrose ", Categories.GROCERIES);
     desc2CategoryMap.put("taste of lahore ", Categories.EATING_OUT);
     desc2CategoryMap.put("amazon ", Categories.SHOPPING);
+    desc2CategoryMap.put("amazon.com", Categories.SHOPPING);
     desc2CategoryMap.put("asda ", Categories.GROCERIES);
     desc2CategoryMap.put("apcoa-hal ", Categories.PARKING);
     desc2CategoryMap.put("apcoa ", Categories.PARKING);
@@ -63,7 +64,7 @@ public class Desc2CategoryMap {
     desc2CategoryMap.put("petroleum ", Categories.FUEL);
     desc2CategoryMap.put("petrol ", Categories.FUEL);
     desc2CategoryMap.put("dental ", Categories.HEALTH);
-    desc2CategoryMap.put("netflix ", Categories.TV);
+    desc2CategoryMap.put("netflix.com", Categories.TV);
     desc2CategoryMap.put("sky ", Categories.TV);
     desc2CategoryMap.put("lidl ", Categories.GROCERIES);
     desc2CategoryMap.put("post office ", Categories.POSTAGE);
@@ -73,8 +74,8 @@ public class Desc2CategoryMap {
     desc2CategoryMap.put("churchill insurance. ", Categories.INSURANCE);
     desc2CategoryMap.put("amzn ", Categories.SHOPPING);
     desc2CategoryMap.put("wickes ", Categories.DIY);
-    desc2CategoryMap.put("just-eat ", Categories.EATING_OUT);
-    desc2CategoryMap.put("creditexpert ", Categories.BILLS);
+    desc2CategoryMap.put("justeat ", Categories.EATING_OUT);
+    desc2CategoryMap.put("creditexpert.co.uk ", Categories.BILLS);
     desc2CategoryMap.put("chiropractic ", Categories.HEALTH);
     desc2CategoryMap.put("wilko ", Categories.HOME_IMPROV);
     desc2CategoryMap.put("spice village ", Categories.EATING_OUT);
@@ -96,16 +97,25 @@ public class Desc2CategoryMap {
     desc2CategoryMap.put("shell ", Categories.FUEL);
     desc2CategoryMap.put("ebay ", Categories.SHOPPING);
     desc2CategoryMap.put("parking ", Categories.PARKING);
+    desc2CategoryMap.put("american express ", Categories.CCARD);
+    desc2CategoryMap.put("google*", Categories.SHOPPING);
+    desc2CategoryMap.put("paypal*", Categories.SHOPPING);
+    desc2CategoryMap.put("etsy ", Categories.SHOPPING);
+    desc2CategoryMap.put("lastpass ", Categories.MISC);
   }
 
-  public String getCategoryForDesc(String desc) {
+  public String getCategoryForDesc(StarlingTransaction sTrans) {
     String retVal = "UNKNOWN";
+
+    if (sTrans.getType().equalsIgnoreCase("ATM")) {
+      return Categories.WITHDRAWAL;
+    }
 
     for (String key : desc2CategoryMap.keySet()) {
       // System.out.println("Checking key: " + key);
-      if (desc.toLowerCase().indexOf(key) > -1) {
+      if (sTrans.getWho().toLowerCase().indexOf(key) > -1) {
         // System.out.println("Found match: " + desc + " -> " + key);
-        return desc2CategoryMap.get(desc);
+        return desc2CategoryMap.get(key);
       }
     }
 

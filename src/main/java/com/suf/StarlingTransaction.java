@@ -2,11 +2,6 @@ package com.suf;
 
 import java.io.Serializable;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.List;
-
-import com.google.api.services.bigquery.model.TableFieldSchema;
-import com.google.api.services.bigquery.model.TableSchema;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -98,6 +93,15 @@ public class StarlingTransaction implements Serializable {
         result = prime * result + ((balance == null) ? 0 : balance.hashCode());
 
         return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        return this.hashCode() == obj.hashCode();
     }
 
     /**

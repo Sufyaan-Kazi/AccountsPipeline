@@ -1,17 +1,22 @@
 #!/bin/sh
 set -e
-
-trap 'abort' 0
 . ./vars.txt
-
+. ./common.sh
 export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
 
-rm -rf ./output/
+main() {
+  tidyUp
 
-class=com.suf.AccountsPrePrep
-project=sufaccounts
-maven_runner=direct-runner
+  set -e
+  trap 'abort' 0
 
-mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --tempLocation=gs://suftempbucket/staging"
+  class=com.suf.AccountsPrePrep
+  project=sufaccounts
+  maven_runner=direct-runner
 
-trap : 0
+  mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --tempLocation=gs://suftempbucket/staging"
+
+  trap : 0
+}
+
+main

@@ -1,16 +1,24 @@
 #!/bin/sh
 set -e
-trap 'abort' 0
 . ./vars.txt
+. ./common.sh
+
 export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
 
-class=com.suf.AccountsPrePrep
-project=sufaccounts
-region=europe-west1
-maven_runner=dataflow-runner
-runner=DataflowRunner
-zone=europe-west2-c
+main() {
+  trap 'abort' 0
 
-mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --runner=$runner --tempLocation=gs://suftempbucket/staging --region=$region --zone=$zone --numWorkers=1"
+  class=com.suf.AccountsPrePrep
+  project=sufaccounts
+  region=europe-west1
+  maven_runner=dataflow-runner
+  runner=DataflowRunner
+  zone=europe-west2-c
 
-trap : 0
+  tidyUp
+  mvn -P$maven_runner compile exec:java -Dexec.mainClass=$class -Dexec.args="--project=$project --runner=$runner --tempLocation=gs://suftempbucket/staging --region=$region --zone=$zone --numWorkers=1"
+
+  trap : 0
+}
+
+main

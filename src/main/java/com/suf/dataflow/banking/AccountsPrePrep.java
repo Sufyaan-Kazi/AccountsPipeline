@@ -15,9 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.suf;
+package com.suf.dataflow.banking;
 
 import com.google.api.services.bigquery.model.TableRow;
+import com.suf.dataflow.banking.datamapping.Desc2CategoryMap;
+import com.suf.dataflow.banking.datamodels.BQSchemaFactory;
+import com.suf.dataflow.banking.datamodels.StarlingTransaction;
+import com.suf.dataflow.banking.functions.MapToTableRowFn;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
@@ -107,25 +111,6 @@ public class AccountsPrePrep {
                 }
         }
 
-        static class MapToTableRowFn extends DoFn<StarlingTransaction, TableRow> {
-                private static final long serialVersionUID = 1L;
-
-                @ProcessElement
-                public void processElement(ProcessContext c) throws Exception {
-                        TableRow row = new TableRow();
-
-                        row.set("when", c.element().getWhen().toString());
-                        row.set("what", c.element().getWhat());
-                        row.set("who", c.element().getWho());
-                        row.set("category", c.element().getCategory());
-                        row.set("type", c.element().getType());
-                        row.set("amount", c.element().getAmount());
-                        row.set("balance", c.element().getBalance());
-
-                        c.output(row);
-                }
-        }
-
         static class MapToStringFn extends DoFn<StarlingTransaction, String> {
                 private static final long serialVersionUID = 1L;
 
@@ -168,7 +153,7 @@ public class AccountsPrePrep {
                 strData.apply("WriteToDisk", TextIO.write().to("gs://sufbankdata/output/accounts").withSuffix(".csv"));
 
                 // write to BQ
-                PCollection<TableRow> tblRows = pojos.apply("MapToTableRow", ParDo.of(new MapToTableRowFn()));
+                PCollection<TableRow> tblRows = pojos.apply("MapToTableRow", ParDo.of(MapToTableRowFn.INSTANCE));
                 tblRows.apply("WriteToBQ", BigQueryIO.writeTableRows().to("sufaccounts:sufbankingds.starlingtxns")
                                 .withSchema(BQSchemaFactory.getStarlingBQSchema())
                                 .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)

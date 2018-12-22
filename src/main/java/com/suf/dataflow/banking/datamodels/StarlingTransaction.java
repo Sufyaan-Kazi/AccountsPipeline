@@ -1,4 +1,4 @@
-package com.suf;
+package com.suf.dataflow.banking.datamodels;
 
 import java.io.Serializable;
 import java.io.StringReader;

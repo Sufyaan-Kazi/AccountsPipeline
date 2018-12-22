@@ -1,4 +1,4 @@
-package com.suf;
+package com.suf.dataflow.banking.datamodels;
 
 import java.util.ArrayList;
 import java.util.List;

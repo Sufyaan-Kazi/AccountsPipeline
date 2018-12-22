@@ -1,4 +1,4 @@
-package com.suf;
+package com.suf.dataflow.banking.datamapping;
 
 public class Categories {
   // Singleton

@@ -1,7 +1,9 @@
-package com.suf;
+package com.suf.dataflow.banking.datamapping;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import com.suf.dataflow.banking.datamodels.StarlingTransaction;
 
 public class Desc2CategoryMap {
   public static final Desc2CategoryMap INSTANCE = new Desc2CategoryMap();

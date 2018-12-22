@@ -10,7 +10,7 @@ main() {
   set -e
   trap 'abort' 0
 
-  class=com.suf.AccountsPrePrep
+  class=com.suf.dataflow.banking.AccountsPrePrep
   project=sufaccounts
   maven_runner=direct-runner
 

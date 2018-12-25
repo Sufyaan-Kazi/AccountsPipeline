@@ -18,17 +18,20 @@
 package com.suf.dataflow.banking;
 
 import com.google.api.services.bigquery.model.TableRow;
-import com.suf.dataflow.banking.datamapping.Desc2CategoryMap;
 import com.suf.dataflow.banking.datamodels.BQSchemaFactory;
 import com.suf.dataflow.banking.datamodels.StarlingTransaction;
+import com.suf.dataflow.banking.datamodels.TxnConfig;
+import com.suf.dataflow.banking.functions.CreateStarlingTxnFn;
+import com.suf.dataflow.banking.functions.CreateTxnConfigFn;
+import com.suf.dataflow.banking.functions.FilterTransactionsFn;
 import com.suf.dataflow.banking.functions.MapToTableRowFn;
+import com.suf.dataflow.banking.functions.StarlingTxnsToStringFn;
 
 import org.apache.beam.sdk.Pipeline;
+import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.TextIO;
 import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
-import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.PCollection;
 
@@ -73,93 +76,59 @@ public class AccountsPrePrep {
                 System.out.println(o.toString());
         }
 
-        static class FilterTransactionsFn extends DoFn<String, String> {
-                private static final long serialVersionUID = 1L;
-
-                @ProcessElement
-                public void processElement(@Element String transactionData, OutputReceiver<String> receiver) {
-                        if (transactionData.startsWith("Date")) {
-                                return;
-                        }
-
-                        if (transactionData.startsWith(",")) {
-                                return;
-                        }
-
-                        /* Temp */
-                        if (transactionData.indexOf("Google") > -1 && transactionData.indexOf("PRD  ") > -1) {
-                                return;
-                        }
-
-                        // otherwise
-                        receiver.output(transactionData);
-                }
-        }
-
-        static class WorkOutCategoryFn extends DoFn<String, StarlingTransaction> {
-                private static final long serialVersionUID = 1L;
-
-                @ProcessElement
-                public void processElement(@Element String transactionData,
-                                OutputReceiver<StarlingTransaction> receiver) {
-                        StarlingTransaction starlingTrans = new StarlingTransaction(transactionData);
-
-                        // Set category (may be null if no match found)
-                        starlingTrans.setCategory(Desc2CategoryMap.INSTANCE.getCategoryForDesc(starlingTrans));
-                        // log("Category has been set to: " + starlingTrans.getCategory());
-                        receiver.output(starlingTrans);
-                }
-        }
-
-        static class MapToStringFn extends DoFn<StarlingTransaction, String> {
-                private static final long serialVersionUID = 1L;
-
-                @ProcessElement
-                public void processElement(ProcessContext c) throws Exception {
-                        StarlingTransaction sTrans = c.element();
-                        c.output(sTrans.toString());
-                }
-        }
-
         public static void main(String[] args) {
 
-                // Initialise map
-                // AccountsPrePrep prep = new AccountsPrePrep();
+                try {
 
-                // Create a PipelineOptions object. This object lets us set various execution
-                // options for our pipeline, such as the runner you wish to use. This example
-                // will run with the DirectRunner by default, based on the class path configured
-                // in its dependencies.
-                PipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation().create();
-                // options.setTempLocation("gs://suftempbucket/");
+                        // Initialise map
+                        // AccountsPrePrep prep = new AccountsPrePrep();
 
-                // Create the Pipeline object with the options we defined above
-                Pipeline p = Pipeline.create(options);
+                        // Create a PipelineOptions object. This object lets us set various execution
+                        // options for our pipeline, such as the runner you wish to use. This example
+                        // will run with the DirectRunner by default, based on the class path configured
+                        // in its dependencies.
+                        PipelineOptionsFactory.register(AccountsPipelineOptions.class);
+                        // PipelineOptions options =
+                        // PipelineOptionsFactory.fromArgs(args).withValidation().create();
 
-                // CoderRegistry cr = p.getCoderRegistry();
-                // cr.registerCoderForClass(StarlingTransaction.class, AtomicCoder());
+                        AccountsPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
+                                        .as(AccountsPipelineOptions.class);
 
-                // Apply Transforms
-                PCollection<String> filteredTransaction = p.apply("ReadData", TextIO.read().from("gs://sufbankdata/*"))
-                                // Filter out unnecessary rows
-                                .apply("FilterTxns", ParDo.of(new FilterTransactionsFn()));
+                        // Create the Pipeline object with the options we defined above
+                        Pipeline bankDataPipeline = Pipeline.create(options);
 
-                // Work out the category
-                PCollection<StarlingTransaction> pojos = filteredTransaction.apply("GetCategory",
-                                ParDo.of(new WorkOutCategoryFn()));
+                        // Get config descriptions for StarlingTransactions
+                        PCollection<TxnConfig> txnConfig = bankDataPipeline
+                                        .apply("ReadStarlingConfig", TextIO.read().from(options.getMappingFile()))
+                                        // ConvertToConfig
+                                        .apply("ConvertToTxnConfig", ParDo.of(new CreateTxnConfigFn()));
 
-                // write text output
-                PCollection<String> strData = pojos.apply("GetStringVersion", ParDo.of(new MapToStringFn()));
-                strData.apply("WriteToDisk", TextIO.write().to("gs://sufbankdata/output/accounts").withSuffix(".csv"));
+                        // Get Data into usable format
+                        PCollection<StarlingTransaction> starlingTxns = bankDataPipeline
+                                        .apply("ReadData", TextIO.read().from(options.getSourceStarlingFolder()))
+                                        // Filter out unnecessary rows
+                                        .apply("FilterTxns", ParDo.of(new FilterTransactionsFn()))
+                                        // Determine Category
+                                        .apply("ConvertToStarlingTxns", ParDo.of(new CreateStarlingTxnFn()));
 
-                // write to BQ
-                PCollection<TableRow> tblRows = pojos.apply("MapToTableRow", ParDo.of(MapToTableRowFn.INSTANCE));
-                tblRows.apply("WriteToBQ", BigQueryIO.writeTableRows().to("sufaccounts:sufbankingds.starlingtxns")
-                                .withSchema(BQSchemaFactory.getStarlingBQSchema())
-                                .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-                                .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+                        // write filtered and enhanced output to GCS buckets
+                        PCollection<String> starlingOutputCSV = starlingTxns.apply("ConvertToCSV",
+                                        ParDo.of(new StarlingTxnsToStringFn()));
+                        starlingOutputCSV.apply("WriteToDisk",
+                                        TextIO.write().to(options.getOutputStarlingFolder()).withSuffix(".csv"));
 
-                // Run
-                p.run().waitUntilFinish();
+                        // also write to BQ
+                        PCollection<TableRow> tblRows = starlingTxns.apply("MapStarlingToBQRows",
+                                        ParDo.of(new MapToTableRowFn()));
+                        tblRows.apply("InsertStarlingBQRows", BigQueryIO.writeTableRows().to(options.getBQTable())
+                                        .withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+
+                        // Run
+                        bankDataPipeline.run().waitUntilFinish();
+                } catch (Throwable t) {
+                        System.out.println(t.getStackTrace());
+                }
         }
 }

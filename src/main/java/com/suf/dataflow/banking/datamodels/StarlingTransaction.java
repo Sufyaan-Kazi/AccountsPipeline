@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.suf.dataflow.banking.datamodels;
 
 import java.io.Serializable;
@@ -22,7 +39,7 @@ public class StarlingTransaction implements Serializable {
     private Float amount = null;
     private Float balance = null;
 
-    public StarlingTransaction() {
+    private StarlingTransaction() {
         super();
     }
 
@@ -37,7 +54,7 @@ public class StarlingTransaction implements Serializable {
             CSVRecord rec = parser.iterator().next();
 
             this.setWhen(LocalDate.parse(rec.get(0), fmt));
-            this.setWhat(rec.get(1));
+            this.setWhat(rec.get(1).toUpperCase());
             this.setWho(rec.get(2));
             this.setType(rec.get(3));
             this.setAmount(Float.valueOf(rec.get(4)));
@@ -70,9 +87,12 @@ public class StarlingTransaction implements Serializable {
     public String toString() {
         StringBuffer str = new StringBuffer();
 
-        str.append(getWhen()).append(",").append(getWho()).append(",").append(getWhat()).append(",");
+        str.append(getWhen()).append(",").append(getWho()).append(",").append(getWhat()).append(",").append(getType())
+                .append(",");
         if (getCategory() != null) {
             str.append(getCategory());
+        } else {
+            str.append("UNKNOWN");
         }
         str.append(",").append(getAmount()).append(",").append(getBalance());
 

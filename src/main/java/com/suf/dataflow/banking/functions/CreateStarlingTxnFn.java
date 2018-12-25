@@ -17,30 +17,31 @@
  */
 package com.suf.dataflow.banking.functions;
 
-import com.google.api.services.bigquery.model.TableRow;
+import com.suf.dataflow.banking.datamapping.TxnConfigMap;
 import com.suf.dataflow.banking.datamodels.StarlingTransaction;
+import com.suf.dataflow.banking.datamodels.TxnConfig;
 
 import org.apache.beam.sdk.transforms.DoFn;
 
-public final class MapToTableRowFn extends DoFn<StarlingTransaction, TableRow> {
+public final class CreateStarlingTxnFn extends DoFn<String, StarlingTransaction> {
   private static final long serialVersionUID = 1L;
 
-  public MapToTableRowFn() {
+  public CreateStarlingTxnFn() {
     super();
   }
 
   @ProcessElement
-  public void processElement(ProcessContext c) throws Exception {
-    TableRow row = new TableRow();
+  public void processElement(@Element String transactionData, OutputReceiver<StarlingTransaction> receiver) {
+    StarlingTransaction starlingTrans = new StarlingTransaction(transactionData);
+    // System.out.println("Processing: " + starlingTrans);
 
-    row.set("when", c.element().getWhen().toString());
-    row.set("what", c.element().getWhat());
-    row.set("who", c.element().getWho());
-    row.set("category", c.element().getCategory());
-    row.set("type", c.element().getType());
-    row.set("amount", c.element().getAmount());
-    row.set("balance", c.element().getBalance());
+    // Set category (may be null if no match found)
+    TxnConfig config = TxnConfigMap.getTxnConfig(starlingTrans);
+    if (config == null)
+      System.out.println("\tConfig: " + starlingTrans + " - " + config);
 
-    c.output(row);
+    starlingTrans.setCategory(config.getCategory());
+    // log("Category has been set to: " + starlingTrans.getCategory());
+    receiver.output(starlingTrans);
   }
 }

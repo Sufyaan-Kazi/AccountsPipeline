@@ -106,7 +106,7 @@ public class AccountsPrePrep {
                         PCollection<String> filteredTxns = bankDataPipeline
                                         .apply("ReadData", TextIO.read().from(options.getSourceFolder() + "*"))
                                         // Filter out unnecessary rows
-                                        .apply("FilterStarlingTxns", ParDo.of(new FilterTransactionsFn()))
+                                        .apply("FilterOutInvalidTxns", ParDo.of(new FilterTransactionsFn()))
                                         // Make sure the config has been loaded
                                         .apply("WaitForConfig", Wait.on(txnConfig));
 
@@ -123,13 +123,13 @@ public class AccountsPrePrep {
                         // write filtered and enhanced output to GCS buckets
                         PCollection<String> starlingOutputCSV = starlingTxns.apply("ConvertStarlingToCSV",
                                         ParDo.of(new ObjectToStringFn()));
-                        starlingOutputCSV.apply("WriteStarlingToDisk",
+                        starlingOutputCSV.apply("WriteStarlingToGCS",
                                         TextIO.write().to(options.getOutputStarlingFolder()).withSuffix(".csv"));
 
                         // write filtered and enhanced output to GCS buckets
                         PCollection<String> barclaysOutputCSV = barclaysTxns.apply("ConvertBarclaysToCSV",
                                         ParDo.of(new ObjectToStringFn()));
-                        barclaysOutputCSV.apply("WriteBarclaysToDisk",
+                        barclaysOutputCSV.apply("WriteBarclaysToGCS",
                                         TextIO.write().to(options.getOutputBarclaysFolder()).withSuffix(".csv"));
 
                         // also write to BQ

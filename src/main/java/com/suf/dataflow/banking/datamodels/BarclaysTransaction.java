@@ -20,6 +20,8 @@ package com.suf.dataflow.banking.datamodels;
 import java.io.Serializable;
 import java.io.StringReader;
 
+import com.suf.dataflow.banking.AccountsPrePrep;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -27,23 +29,20 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-public class StarlingTransaction implements Serializable {
+public class BarclaysTransaction implements Serializable {
     private static final long serialVersionUID = 1L;
     private static final DateTimeFormatter fmt = DateTimeFormat.forPattern("dd/MM/yyyy");
 
     private LocalDate when = null;
     private String who = null;
-    private String what = null;
-    private String type = null;
     private String category = null;
     private Float amount = null;
-    private Float balance = null;
 
-    private StarlingTransaction() {
+    private BarclaysTransaction() {
         super();
     }
 
-    public StarlingTransaction(String csv) {
+    public BarclaysTransaction(String csv) {
         this();
 
         StringReader csvReader = null;
@@ -54,20 +53,18 @@ public class StarlingTransaction implements Serializable {
 
             CSVRecord rec = parser.iterator().next();
             // Is it this type of Transaction?
-            // Sample Starling Transaction: 08/03/2018,KAZI S+B,INITIAL BALANCE,FASTER
+            // Sample Barclays Transaction: 28/03/2017,-66.45,BT GROUP PLC GB09431096-000074
+            // DDR,phone
             // PAYMENT,200.00,200.00
-            if (rec == null || rec.size() != 6 || rec.get(0).trim().length() == 0) {
+            if (rec == null || rec.size() != 4 || rec.get(0).trim().length() == 1) {
                 return;
             }
 
             this.setWhen(LocalDate.parse(rec.get(0), fmt));
-            this.setWhat(rec.get(1).toUpperCase());
+            this.setAmount(Float.valueOf(rec.get(1)));
             this.setWho(rec.get(2));
-            this.setType(rec.get(3));
-            this.setAmount(Float.valueOf(rec.get(4)));
-            this.setBalance(Float.valueOf(rec.get(5)));
         } catch (Exception e) {
-            String msg = "Exception parsing Starling Transaction: " + csv + " -> " + e.getLocalizedMessage();
+            String msg = "Exception parsing Barclays Transaction: " + csv + " -> " + e.getLocalizedMessage();
             System.err.println(msg);
             throw new IllegalStateException(msg, e);
         } finally {
@@ -95,14 +92,13 @@ public class StarlingTransaction implements Serializable {
     public String toString() {
         StringBuffer str = new StringBuffer();
 
-        str.append(getWhen()).append(",").append(getWho()).append(",").append(getWhat()).append(",").append(getType())
-                .append(",");
+        str.append(getWhen()).append(",").append(getWho()).append(",").append(",");
         if (getCategory() != null) {
             str.append(getCategory());
         } else {
             str.append("UNKNOWN");
         }
-        str.append(",").append(getAmount()).append(",").append(getBalance());
+        str.append(",").append(getAmount());
 
         return str.toString();
     }
@@ -114,11 +110,8 @@ public class StarlingTransaction implements Serializable {
 
         result = prime * result + ((when == null) ? 0 : when.hashCode());
         result = prime * result + ((who == null) ? 0 : who.hashCode());
-        result = prime * result + ((what == null) ? 0 : what.hashCode());
-        result = prime * result + ((type == null) ? 0 : type.hashCode());
         result = prime * result + ((category == null) ? 0 : category.hashCode());
         result = prime * result + ((amount == null) ? 0 : amount.hashCode());
-        result = prime * result + ((balance == null) ? 0 : balance.hashCode());
 
         return result;
     }
@@ -161,34 +154,6 @@ public class StarlingTransaction implements Serializable {
     }
 
     /**
-     * @return String return the what
-     */
-    public String getWhat() {
-        return what;
-    }
-
-    /**
-     * @param what the what to set
-     */
-    public void setWhat(String what) {
-        this.what = what;
-    }
-
-    /**
-     * @return String return the type
-     */
-    public String getType() {
-        return type;
-    }
-
-    /**
-     * @param type the type to set
-     */
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    /**
      * @return Float return the amount
      */
     public Float getAmount() {
@@ -200,20 +165,6 @@ public class StarlingTransaction implements Serializable {
      */
     public void setAmount(Float amount) {
         this.amount = amount;
-    }
-
-    /**
-     * @return Float return the balance
-     */
-    public Float getBalance() {
-        return balance;
-    }
-
-    /**
-     * @param balance the balance to set
-     */
-    public void setBalance(Float balance) {
-        this.balance = balance;
     }
 
     /**

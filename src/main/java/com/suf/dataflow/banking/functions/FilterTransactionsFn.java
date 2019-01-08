@@ -32,7 +32,11 @@ public final class FilterTransactionsFn extends DoFn<String, String> {
       return;
     }
 
-    if (transactionData.startsWith(",")) {
+    if (transactionData.trim().startsWith(",")) {
+      return;
+    }
+
+    if (transactionData.trim().length() < 6) {
       return;
     }
 

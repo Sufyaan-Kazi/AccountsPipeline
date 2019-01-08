@@ -38,6 +38,10 @@ public class TxnConfig implements Serializable {
     public TxnConfig(String csv) {
         this();
 
+        if (csv == null || csv.trim().length() == 0) {
+            throw new IllegalStateException("No mapping file to identify transactions type supplied");
+        }
+
         StringReader csvReader = null;
         CSVParser parser = null;
         try {

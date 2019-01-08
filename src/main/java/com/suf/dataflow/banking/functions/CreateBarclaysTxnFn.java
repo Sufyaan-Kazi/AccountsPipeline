@@ -17,35 +17,34 @@
  */
 package com.suf.dataflow.banking.functions;
 
-import com.suf.dataflow.banking.AccountsPrePrep;
 import com.suf.dataflow.banking.datamapping.TxnConfigMap;
-import com.suf.dataflow.banking.datamodels.StarlingTransaction;
+import com.suf.dataflow.banking.datamodels.BarclaysTransaction;
 import com.suf.dataflow.banking.datamodels.TxnConfig;
 
 import org.apache.beam.sdk.transforms.DoFn;
 
-public final class CreateStarlingTxnFn extends DoFn<String, StarlingTransaction> {
+public final class CreateBarclaysTxnFn extends DoFn<String, BarclaysTransaction> {
   private static final long serialVersionUID = 1L;
 
-  public CreateStarlingTxnFn() {
+  public CreateBarclaysTxnFn() {
     super();
   }
 
   @ProcessElement
-  public void processElement(@Element String transactionData, OutputReceiver<StarlingTransaction> receiver) {
-    StarlingTransaction starlingTrans = new StarlingTransaction(transactionData);
-    if (starlingTrans == null || starlingTrans.getAmount() == null) {
+  public void processElement(@Element String transactionData, OutputReceiver<BarclaysTransaction> receiver) {
+    BarclaysTransaction barclaysTrans = new BarclaysTransaction(transactionData);
+    if (barclaysTrans == null || barclaysTrans.getAmount() == null) {
       return;
     }
     // System.out.println("Processing: " + starlingTrans);
 
     // Set category (may be null if no match found)
-    TxnConfig config = TxnConfigMap.getTxnConfig(starlingTrans);
+    TxnConfig config = TxnConfigMap.getTxnConfig(barclaysTrans);
     if (config == null)
-      AccountsPrePrep.log("\tConfig: " + starlingTrans + " - " + config);
+      System.out.println("\tConfig: " + barclaysTrans + " - " + config);
 
-    starlingTrans.setCategory(config.getCategory());
+    barclaysTrans.setCategory(config.getCategory());
     // log("Category has been set to: " + starlingTrans.getCategory());
-    receiver.output(starlingTrans);
+    receiver.output(barclaysTrans);
   }
 }

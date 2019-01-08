@@ -17,22 +17,20 @@
  */
 package com.suf.dataflow.banking;
 
-import com.google.api.services.bigquery.model.TableRow;
-import com.suf.dataflow.banking.datamodels.BQSchemaFactory;
+import com.suf.dataflow.banking.datamodels.BarclaysTransaction;
 import com.suf.dataflow.banking.datamodels.StarlingTransaction;
 import com.suf.dataflow.banking.datamodels.TxnConfig;
+import com.suf.dataflow.banking.functions.CreateBarclaysTxnFn;
 import com.suf.dataflow.banking.functions.CreateStarlingTxnFn;
 import com.suf.dataflow.banking.functions.CreateTxnConfigFn;
 import com.suf.dataflow.banking.functions.FilterTransactionsFn;
-import com.suf.dataflow.banking.functions.MapToTableRowFn;
-import com.suf.dataflow.banking.functions.StarlingTxnsToStringFn;
+import com.suf.dataflow.banking.functions.ObjectToStringFn;
 
 import org.apache.beam.sdk.Pipeline;
-import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.io.TextIO;
-import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.ParDo;
+import org.apache.beam.sdk.transforms.Wait;
 import org.apache.beam.sdk.values.PCollection;
 
 /**
@@ -68,7 +66,7 @@ import org.apache.beam.sdk.values.PCollection;
  */
 public class AccountsPrePrep {
 
-        private static void log(Object o) {
+        public static void log(Object o) {
                 if (o == null) {
                         return;
                 }
@@ -93,42 +91,63 @@ public class AccountsPrePrep {
 
                         AccountsPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
                                         .as(AccountsPipelineOptions.class);
+                        log(options.toString() + options.getBQTable());
 
                         // Create the Pipeline object with the options we defined above
                         Pipeline bankDataPipeline = Pipeline.create(options);
 
                         // Get config descriptions for StarlingTransactions
                         PCollection<TxnConfig> txnConfig = bankDataPipeline
-                                        .apply("ReadStarlingConfig", TextIO.read().from(options.getMappingFile()))
+                                        .apply("ReadConfig", TextIO.read().from(options.getMappingFile()))
                                         // ConvertToConfig
                                         .apply("ConvertToTxnConfig", ParDo.of(new CreateTxnConfigFn()));
 
-                        // Get Data into usable format
-                        PCollection<StarlingTransaction> starlingTxns = bankDataPipeline
-                                        .apply("ReadData", TextIO.read().from(options.getSourceStarlingFolder()))
+                        // Get Starling Data into usable format
+                        PCollection<String> filteredTxns = bankDataPipeline
+                                        .apply("ReadData", TextIO.read().from(options.getSourceFolder() + "*"))
                                         // Filter out unnecessary rows
-                                        .apply("FilterTxns", ParDo.of(new FilterTransactionsFn()))
+                                        .apply("FilterStarlingTxns", ParDo.of(new FilterTransactionsFn()))
+                                        // Make sure the config has been loaded
+                                        .apply("WaitForConfig", Wait.on(txnConfig));
+
+                        // Get Starling Data into usable format
+                        PCollection<StarlingTransaction> starlingTxns = filteredTxns
                                         // Determine Category
                                         .apply("ConvertToStarlingTxns", ParDo.of(new CreateStarlingTxnFn()));
 
+                        // Get Barclays Data into usable format
+                        PCollection<BarclaysTransaction> barclaysTxns = filteredTxns
+                                        // Determine Category
+                                        .apply("ConvertToBarclaysTxns", ParDo.of(new CreateBarclaysTxnFn()));
+
                         // write filtered and enhanced output to GCS buckets
-                        PCollection<String> starlingOutputCSV = starlingTxns.apply("ConvertToCSV",
-                                        ParDo.of(new StarlingTxnsToStringFn()));
-                        starlingOutputCSV.apply("WriteToDisk",
+                        PCollection<String> starlingOutputCSV = starlingTxns.apply("ConvertStarlingToCSV",
+                                        ParDo.of(new ObjectToStringFn()));
+                        starlingOutputCSV.apply("WriteStarlingToDisk",
                                         TextIO.write().to(options.getOutputStarlingFolder()).withSuffix(".csv"));
 
+                        // write filtered and enhanced output to GCS buckets
+                        PCollection<String> barclaysOutputCSV = barclaysTxns.apply("ConvertBarclaysToCSV",
+                                        ParDo.of(new ObjectToStringFn()));
+                        barclaysOutputCSV.apply("WriteBarclaysToDisk",
+                                        TextIO.write().to(options.getOutputBarclaysFolder()).withSuffix(".csv"));
+
                         // also write to BQ
-                        PCollection<TableRow> tblRows = starlingTxns.apply("MapStarlingToBQRows",
-                                        ParDo.of(new MapToTableRowFn()));
-                        tblRows.apply("InsertStarlingBQRows", BigQueryIO.writeTableRows().to(options.getBQTable())
-                                        .withSchema(BQSchemaFactory.getStarlingBQSchema())
-                                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-                                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+                        /*
+                         * PCollection<TableRow> tblRows = starlingTxns.apply("MapStarlingToBQRows",
+                         * ParDo.of(new MapToTableRowFn())); tblRows.apply("InsertStarlingBQRows",
+                         * BigQueryIO.writeTableRows().to(options.getBQTable())
+                         * .withSchema(BQSchemaFactory.getStarlingBQSchema())
+                         * .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                         * .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+                         */
 
                         // Run
                         bankDataPipeline.run().waitUntilFinish();
                 } catch (Throwable t) {
-                        System.out.println(t.getStackTrace());
+                        System.err.println("******************* An Exception occurred *****************");
+                        System.err.println(t.getLocalizedMessage());
+                        t.printStackTrace();
                 }
         }
 }

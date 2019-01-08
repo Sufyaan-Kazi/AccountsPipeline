@@ -17,14 +17,12 @@
  */
 package com.suf.dataflow.banking.functions;
 
-import com.suf.dataflow.banking.datamodels.StarlingTransaction;
-
 import org.apache.beam.sdk.transforms.DoFn;
 
-public final class StarlingTxnsToStringFn extends DoFn<StarlingTransaction, String> {
+public final class ObjectToStringFn extends DoFn<Object, String> {
   private static final long serialVersionUID = 1L;
 
-  public StarlingTxnsToStringFn() {
+  public ObjectToStringFn() {
     super();
   }
 

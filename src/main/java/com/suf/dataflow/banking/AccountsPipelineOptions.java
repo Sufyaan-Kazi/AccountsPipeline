@@ -25,20 +25,25 @@ public interface AccountsPipelineOptions extends PipelineOptions {
   @Description("Location of transaction mapping file")
   String getMappingFile();
 
-  @Description("Source location for Starling Data")
-  String getSourceStarlingFolder();
+  void setMappingFile(String mappingFile);
+
+  @Description("Source location for Data")
+  String getSourceFolder();
+
+  void setSourceFolder(String sourceFolder);
 
   @Description("Output location for Starling Data")
   String getOutputStarlingFolder();
 
-  @Description("Output table in BigQuery")
-  String getBQTable();
-
-  void setMappingFile(String mappingFile);
-
-  void setSourceStarlingFolder(String sourceStarlingFolder);
-
   void setOutputStarlingFolder(String outputStarlingFolder);
 
-  void setBQTable(String bqTable);
+  @Description("Output location for Barclays Data")
+  String getOutputBarclaysFolder();
+
+  void setOutputBarclaysFolder(String outpuBarclaysFolder);
+
+  @Description("BigQuery Table")
+  String getBQTable();
+
+  void setBQTable(String BQTable);
 }

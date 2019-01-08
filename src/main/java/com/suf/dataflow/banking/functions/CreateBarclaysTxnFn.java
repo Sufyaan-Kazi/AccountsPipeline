@@ -33,7 +33,7 @@ public final class CreateBarclaysTxnFn extends DoFn<String, BarclaysTransaction>
   @ProcessElement
   public void processElement(@Element String transactionData, OutputReceiver<BarclaysTransaction> receiver) {
     BarclaysTransaction barclaysTrans = new BarclaysTransaction(transactionData);
-    if (barclaysTrans == null || barclaysTrans.getAmount() == null) {
+    if (barclaysTrans == null || barclaysTrans.getWho() == null) {
       return;
     }
     // System.out.println("Processing: " + starlingTrans);

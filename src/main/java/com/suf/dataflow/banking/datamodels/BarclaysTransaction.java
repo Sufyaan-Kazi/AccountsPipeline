@@ -62,6 +62,10 @@ public class BarclaysTransaction implements Serializable {
 
             this.setWhen(LocalDate.parse(rec.get(0), fmt));
             this.setAmount(Float.valueOf(rec.get(1)));
+            // Filter out sensitive stuff
+            if (this.getAmount() > 2000) {
+                return;
+            }
             this.setWho(rec.get(2));
         } catch (Exception e) {
             String msg = "Exception parsing Barclays Transaction: " + csv + " -> " + e.getLocalizedMessage();

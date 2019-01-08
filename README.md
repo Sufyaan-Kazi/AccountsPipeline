@@ -7,3 +7,5 @@ runLocal.sh or runOnDataFlow.sh are the main entry points. The shell/code does t
 1) Copy all input data (banking transactions) from input gcs folders into a single folder)
 2) Read an input mapping files used to infer the transaction type from text in a transaction
 3) Map and process the raw transaction data into categorised transactions, write them to BigQuery and then as csv's to an out GCS folder.
+
+![Graph](/docs/dflow.png)

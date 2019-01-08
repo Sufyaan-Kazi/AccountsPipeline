@@ -1,1 +1,0 @@
-when:DATE,who:STRING,what:STRING,type:STRING,category:STRING,amount:FLOAT,balance:FLOAT

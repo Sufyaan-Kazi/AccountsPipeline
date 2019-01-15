@@ -1,4 +1,28 @@
 #!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This script is used to setup and initialise required resources used by the main project scripts (runXXX.sh)
+# The script does the following
+#  - Read in parameters defined in vars.txt
+#  - Enable the project API's defined in vars.txt if they have not been enabled already
+#  - Creates a Service account with the right permissions for this project
+#  - Creates the dataset in BigQuery
+
 set -e
 
 main() {
@@ -28,10 +52,16 @@ abort()
 
 #
 ## Create the Big Query dataset
+# The script does the following:
+#  - Create the dataset in the region defined in vars.txt and then creates the table
+#  - Uses a template json (bq.json) file with the correct permissions mapped to create a version of it 
+#    with the required dataset, tablename and service account name and then writes this to a temporary file
+#  - Updates BigQuery with the permissions file
+#  - Removes the temporary json file used in the previous step
 #
 createBQDataset(){
 ## Create the dataset and table
-  bq mk --location europe-west2 -d ${DATASET}
+  bq mk --location $REGION -d ${DATASET}
   bq mk -t ${DATASET}.${TABLE}
 
   # Give the service account permission on the dataset using the generic file
@@ -46,6 +76,7 @@ createBQDataset(){
 
 #
 # get Credentials for default compute service account
+# Not used
 #
 getCredentials() {
   SERVICE_ACC=$(gcloud iam service-accounts list | grep '\-compute\@' | xargs | cut -d " " -f6)
@@ -60,7 +91,14 @@ getCredentials() {
 }
 
 #
-## Create the Service accounts
+## Create the Service account
+# This script does the following:
+#  - Determine if the service account exists or not
+#  - Assuming it doesn't, it creates it using the values defined in vars.txt
+#  - Adds a policy binding for the list of roles defined in vars.txt
+#  - Waits for the policy bindings to propagate
+#  - Creates a key for the service account and stores this json in the directory defined in vars.txt
+#  - Exports this key to the Google env variable which will be used by the GCP API invoked by Beam
 #
 createServiceAccount() {
   # Check if the service account exists or not?
@@ -83,8 +121,8 @@ createServiceAccount() {
       gcloud projects add-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet > /dev/null || true
     done
 
-    # We need a few seconds for the policies to propogate ot the bucket and other resources
-    echo "*** Waiting for Policy Bindings to Propogate ... ***"
+    # We need a few seconds for the policies to propagate ot the bucket and other resources
+    echo "*** Waiting for Policy Bindings to Propagate ... ***"
     sleep 15
 
     # create the key
@@ -99,11 +137,18 @@ createServiceAccount() {
 }
 
 ## Enable GCloud APIS
+# This functions does the following
+#  - Grab the list of currently enabled API's in the project
+#  - Loop through the list of API's required in vars.txt
+#  - For each API
+#    - Check if it has been enabled already
+#    - Assuming it hasn't, then enable it
+#
 enableAPIS() {
-  declare -a REQ_APIS=("iam" "compute" "dataflow" "logging" "storage-component" "storage-api" "bigquery" "pubsub")
-
   ENABLED_APIS=$(gcloud services list --enabled | grep -v NAME | sort | cut -d " " -f1)
   #echo "Current APIs enabled are: ${ENABLED_APIS}"
+
+  declare -a REQ_APIS=(${APIS})
   for api in "${REQ_APIS[@]}"
   do
     EXISTS=$(echo ${ENABLED_APIS} | grep ${api} | wc -l)
@@ -111,6 +156,7 @@ enableAPIS() {
     then
       echo "*** Enabling ${api} API"
       gcloud services enable "${api}.googleapis.com"
+      sleep 2
     fi
   done
 }

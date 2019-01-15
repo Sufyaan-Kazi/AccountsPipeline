@@ -1,6 +1,6 @@
 # AccountsPipeline
 
-This is a sample pipeline (to be used for education and inspiration purposes only) for processing financial data using Apache Beam. In this sample, personal banking transacitons are processed so they can be inserted into BigQuery. The transaction data is filtered to removed bad data, then enhanced using primitive deduction work to infer the category or type of spending (e.g. groceries vs clothe shopping etc) and the data is then windowed on a day basis. 
+This is a sample pipeline (to be used for education and inspiration purposes only) for processing financial data using Apache Beam. In this sample, personal banking transacitons are processed so they can be inserted into BigQuery. The transaction data is filtered to remove bad data, then enhanced using primitive deduction work to infer the category or type of spending (e.g. groceries vs clothe shopping etc) and the data is then windowed on a day basis. 
 
 This project executed via runPipeline.sh. If no arguments are supplied then the script defaults to direct mode, otherwise if any argument is supplied it defaults to dataflow mode. 
 

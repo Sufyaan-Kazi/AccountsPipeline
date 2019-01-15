@@ -1,6 +1,8 @@
 # AccountsPipeline
 
-This is a sample pipeline (to be used for education and inspiration purposes only) for processing financial data using Apache Beam. In this sample, personal banking transacitons are processed so they can be inserted into BigQuery. The transaction data is filtered to remove bad data, then enhanced using primitive deduction work to infer the category or type of spending (e.g. groceries vs clothe shopping etc) and the data is then windowed on a day basis. 
+![Graph](/docs/dflow.png)
+
+This is a sample pipeline (to be used for education and inspiration purposes only) for processing financial data using Apache Beam. In this sample, personal banking transactions are processed so they can be inserted into BigQuery. The transaction data is filtered to remove bad data, then enhanced using primitive deduction work to infer the category or type of spending (e.g. groceries vs clothes shopping etc) and the data is then windowed on a day basis. 
 
 This project executed via runPipeline.sh. If no arguments are supplied then the script defaults to direct mode, otherwise if any argument is supplied it defaults to dataflow mode. 
 
@@ -27,5 +29,3 @@ The Beam pipeline itself does the following:
 When running on Dataflow, there will obviously be an initial delay while a worker is launched from scratch in order to execute the pipeline. You would get the same delay on your local machine in direct mode, if for example you turned the machine off first, then timed the it took to switch on your mchine, open a terminal, launch the app ...
 
 Because of the nature of Beam, there is no need in the code or the config to specify the number of threads, workers etc and/or the precise ordering of steps. The Beam runners will dynamically work this out, scaling up underlying compute resources as needed and re-balancing work between idle workers. In this way if there was a deluge of Barclays data then that part of the pipeline could be given more workers and indeed may be prioritised over Starling, the runner does this for me automatically. Also, Beam automatically handles the parrellisation for me to the constraints of the data and compute as needed.
-
-![Graph](/docs/dflow.png)

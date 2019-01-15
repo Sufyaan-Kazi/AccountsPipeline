@@ -29,7 +29,7 @@ import org.joda.time.LocalDate;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
-public class BarclaysTransaction implements Serializable {
+public class BarclaysTransaction implements Serializable, BankTransaction {
     private static final long serialVersionUID = 1L;
     private static final DateTimeFormatter fmt = DateTimeFormat.forPattern("dd/MM/yyyy");
 

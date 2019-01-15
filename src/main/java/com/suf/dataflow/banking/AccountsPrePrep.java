@@ -17,6 +17,8 @@
  */
 package com.suf.dataflow.banking;
 
+import com.google.api.services.bigquery.model.TableRow;
+import com.suf.dataflow.banking.datamodels.BQSchemaFactory;
 import com.suf.dataflow.banking.datamodels.BarclaysTransaction;
 import com.suf.dataflow.banking.datamodels.StarlingTransaction;
 import com.suf.dataflow.banking.datamodels.TxnConfig;
@@ -24,45 +26,42 @@ import com.suf.dataflow.banking.functions.CreateBarclaysTxnFn;
 import com.suf.dataflow.banking.functions.CreateStarlingTxnFn;
 import com.suf.dataflow.banking.functions.CreateTxnConfigFn;
 import com.suf.dataflow.banking.functions.FilterTransactionsFn;
+import com.suf.dataflow.banking.functions.MapBarclaysToTableRowFn;
+import com.suf.dataflow.banking.functions.MapStarlingToTableRowFn;
 import com.suf.dataflow.banking.functions.ObjectToStringFn;
 
 import org.apache.beam.sdk.Pipeline;
 import org.apache.beam.sdk.io.TextIO;
+import org.apache.beam.sdk.io.gcp.bigquery.BigQueryIO;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
+import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.Wait;
+import org.apache.beam.sdk.transforms.windowing.FixedWindows;
+import org.apache.beam.sdk.transforms.windowing.Window;
 import org.apache.beam.sdk.values.PCollection;
+import org.joda.time.Duration;
+import org.joda.time.Instant;
 
 /**
- * An example that counts words in Shakespeare.
+ * An example pipeline that processes bank account transactions.
  *
  * <p>
- * This class, {@link MinimalWordCount}, is the first in a series of four
- * successively more detailed 'word count' examples. Here, for simplicity, we
- * don't show any error-checking or argument processing, and focus on
- * construction of the pipeline, which chains together the application of core
- * transforms.
- *
- * <p>
- * Next, see the {@link WordCount} pipeline, then the
- * {@link DebuggingWordCount}, and finally the {@link WindowedWordCount}
- * pipeline, for more detailed examples that introduce additional concepts.
- *
+ * This class processes bank transactions, by filtering out header rows and
+ * invalid lines, mapping the transaction to a category or transaciton type and
+ * then writes the enriched/filtered data into BigQuery. The data is windowed by
+ * day, amd transactions may come from either Barclays or Starling bank for the
+ * purposes of this example.
  * <p>
  * Concepts:
  *
  * <pre>
- *   1. Reading data from text files
+ *   1. Reading data from text files on Google Cloud Storage
  *   2. Specifying 'inline' transforms
- *   3. Counting items in a PCollection
- *   4. Writing data to text files
+ *   3. Deducing a category and adding this as a new column to the data
+ *   4. Writing data to text files and into Big Query
  * </pre>
  *
- * <p>
- * No arguments are required to run this pipeline. It will be executed with the
- * DirectRunner. You can see the results in the output files in your current
- * working directory, with names like "wordcounts-00001-of-00005. When running
- * on a distributed service, you would use an appropriate file service.
  */
 public class AccountsPrePrep {
 
@@ -77,32 +76,24 @@ public class AccountsPrePrep {
         public static void main(String[] args) {
 
                 try {
-
-                        // Initialise map
-                        // AccountsPrePrep prep = new AccountsPrePrep();
-
-                        // Create a PipelineOptions object. This object lets us set various execution
-                        // options for our pipeline, such as the runner you wish to use. This example
-                        // will run with the DirectRunner by default, based on the class path configured
-                        // in its dependencies.
+                        // Create a PipelineOptions object and populate from the supplied options, then
+                        // create the pipeline object with these options
                         PipelineOptionsFactory.register(AccountsPipelineOptions.class);
-                        // PipelineOptions options =
-                        // PipelineOptionsFactory.fromArgs(args).withValidation().create();
-
                         AccountsPipelineOptions options = PipelineOptionsFactory.fromArgs(args).withValidation()
                                         .as(AccountsPipelineOptions.class);
-                        log(options.toString() + options.getBQTable());
-
-                        // Create the Pipeline object with the options we defined above
+                        log(options.toString());
                         Pipeline bankDataPipeline = Pipeline.create(options);
 
-                        // Get config descriptions for StarlingTransactions
+                        // Create a mapping between possible words in the transaction description and
+                        // the
+                        // category to assign, e.g. '....tescos...' is most likely groceries shopping
                         PCollection<TxnConfig> txnConfig = bankDataPipeline
                                         .apply("ReadConfig", TextIO.read().from(options.getMappingFile()))
                                         // ConvertToConfig
                                         .apply("ConvertToTxnConfig", ParDo.of(new CreateTxnConfigFn()));
 
-                        // Get Starling Data into usable format
+                        // Once the config mapping has been loaded
+                        // Read in the Bank Transaciton Data, filter out invalid transactions
                         PCollection<String> filteredTxns = bankDataPipeline
                                         .apply("ReadData", TextIO.read().from(options.getSourceFolder() + "*"))
                                         // Filter out unnecessary rows
@@ -110,37 +101,79 @@ public class AccountsPrePrep {
                                         // Make sure the config has been loaded
                                         .apply("WaitForConfig", Wait.on(txnConfig));
 
-                        // Get Starling Data into usable format
+                        // Create a colleciton of Starling Bank Transactions from the input, windowed by
+                        // day
                         PCollection<StarlingTransaction> starlingTxns = filteredTxns
                                         // Determine Category
-                                        .apply("ConvertToStarlingTxns", ParDo.of(new CreateStarlingTxnFn()));
+                                        .apply("ConvertToStarlingTxns", ParDo.of(new CreateStarlingTxnFn()))
+                                        .apply("WindowStarlingTxns",
+                                                        Window.<StarlingTransaction>into(
+                                                                        FixedWindows.of(Duration.standardDays(1))))
+                                        .apply("AddStarlingTimestamp",
+                                                        ParDo.of(new DoFn<StarlingTransaction, StarlingTransaction>() {
+                                                                private static final long serialVersionUID = 1L;
 
-                        // Get Barclays Data into usable format
+                                                                @ProcessElement
+                                                                public void processElement(
+                                                                                @Element StarlingTransaction transactionData,
+                                                                                OutputReceiver<StarlingTransaction> receiver) {
+                                                                        receiver.outputWithTimestamp(transactionData,
+                                                                                        new Instant(transactionData
+                                                                                                        .getWhen()
+                                                                                                        .toDate()
+                                                                                                        .getTime()));
+                                                                }
+                                                        }));
+
+                        // Create a PColleciton of Barclays Transactions from the input, windowed by day
                         PCollection<BarclaysTransaction> barclaysTxns = filteredTxns
                                         // Determine Category
-                                        .apply("ConvertToBarclaysTxns", ParDo.of(new CreateBarclaysTxnFn()));
+                                        .apply("ConvertToBarclaysTxns", ParDo.of(new CreateBarclaysTxnFn()))
+                                        .apply("WindowBarclaysTxns",
+                                                        Window.<BarclaysTransaction>into(
+                                                                        FixedWindows.of(Duration.standardDays(1))))
+                                        .apply("AddBarclaysTimestamp",
+                                                        ParDo.of(new DoFn<BarclaysTransaction, BarclaysTransaction>() {
+                                                                private static final long serialVersionUID = 1L;
 
-                        // write filtered and enhanced output to GCS buckets
+                                                                @ProcessElement
+                                                                public void processElement(
+                                                                                @Element BarclaysTransaction transactionData,
+                                                                                OutputReceiver<BarclaysTransaction> receiver) {
+                                                                        receiver.outputWithTimestamp(transactionData,
+                                                                                        new Instant(transactionData
+                                                                                                        .getWhen()
+                                                                                                        .toDate()
+                                                                                                        .getTime()));
+                                                                }
+                                                        }));
+
+                        // write out the Starling Bank data to a GCS bucket
                         PCollection<String> starlingOutputCSV = starlingTxns.apply("ConvertStarlingToCSV",
                                         ParDo.of(new ObjectToStringFn()));
                         starlingOutputCSV.apply("WriteStarlingToGCS",
                                         TextIO.write().to(options.getOutputStarlingFolder()).withSuffix(".csv"));
 
-                        // write filtered and enhanced output to GCS buckets
+                        // Write out the Barclays data to a GCS Bucket
                         PCollection<String> barclaysOutputCSV = barclaysTxns.apply("ConvertBarclaysToCSV",
                                         ParDo.of(new ObjectToStringFn()));
                         barclaysOutputCSV.apply("WriteBarclaysToGCS",
                                         TextIO.write().to(options.getOutputBarclaysFolder()).withSuffix(".csv"));
 
                         // also write to BQ
-                        /*
-                         * PCollection<TableRow> tblRows = starlingTxns.apply("MapStarlingToBQRows",
-                         * ParDo.of(new MapToTableRowFn())); tblRows.apply("InsertStarlingBQRows",
-                         * BigQueryIO.writeTableRows().to(options.getBQTable())
-                         * .withSchema(BQSchemaFactory.getStarlingBQSchema())
-                         * .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
-                         * .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
-                         */
+                        PCollection<TableRow> starlingTblRows = starlingTxns.apply("MapStarlingToBQRows",
+                                        ParDo.of(new MapStarlingToTableRowFn()));
+                        starlingTblRows.apply("InsertStarlingBQRows", BigQueryIO.writeTableRows()
+                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
+
+                        PCollection<TableRow> barclaysTblRows = barclaysTxns.apply("MapBarclaysToBQRows",
+                                        ParDo.of(new MapBarclaysToTableRowFn()));
+                        barclaysTblRows.apply("InsertBarclaysBQRows", BigQueryIO.writeTableRows()
+                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                        .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
+                                        .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
 
                         // Run
                         bankDataPipeline.run().waitUntilFinish();

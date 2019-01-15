@@ -22,10 +22,10 @@ import com.suf.dataflow.banking.datamodels.StarlingTransaction;
 
 import org.apache.beam.sdk.transforms.DoFn;
 
-public final class MapToTableRowFn extends DoFn<StarlingTransaction, TableRow> {
+public final class MapStarlingToTableRowFn extends DoFn<StarlingTransaction, TableRow> {
   private static final long serialVersionUID = 1L;
 
-  public MapToTableRowFn() {
+  public MapStarlingToTableRowFn() {
     super();
   }
 

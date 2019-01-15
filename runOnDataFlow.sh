@@ -15,6 +15,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+## This scripts executes the Pipeline on Dataflow
+# This script does the following:
+#  - Reads in parameters (vars.txt) and common functions (common.sh)
+#  - Map parameters into shell variables to be used as Pipeline options
+#  - Copies the config mapping (used to map text in the transaction to a category) upto GCS
+#  - Build the Pipeline Options var
+#  - Launches the Pipeline on Dataflow
+#
+
 set -e
 . ./vars.txt
 . ./common.sh
@@ -25,8 +34,8 @@ maven_runner=dataflow-runner
 projectID=${PROJECT_ID}
 mappingFile=gs://${BUCKET_NAME}/${CONFIG_FILE}
 runner=DataflowRunner
-region=europe-west1
-zone=europe-west2-c
+region=${DF_REGION}
+zone=${DF_ZONE}
 
 #GCS Bucket args
 sourceFolder=gs://${BUCKET_NAME}/input/
@@ -37,6 +46,13 @@ outputBarclaysFolder=gs://${BUCKET_NAME}/output/barclays_accounts
 BQTable=${projectID}:${DATASET}.${TABLE}
 
 main() {
+  prepareConfigMapping
+  tidyUp gs://${BUCKET_NAME}/output/
+
+  tidyUp ${sourceFolder}
+  gsutil -m cp -r gs://${BUCKET_NAME}/starling/* ${sourceFolder}
+  gsutil -m cp -r gs://${BUCKET_NAME}/barclays/* ${sourceFolder}
+
   trap 'abort' 0
 
   mvn_args="--project=$projectID \
@@ -62,11 +78,5 @@ prepareConfigMapping() {
   gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
 }
 
-prepareConfigMapping
-tidyUp gs://${BUCKET_NAME}/output/
-
-tidyUp ${sourceFolder}
-gsutil -m cp -r gs://${BUCKET_NAME}/starling/* ${sourceFolder}
-gsutil -m cp -r gs://${BUCKET_NAME}/barclays/* ${sourceFolder}
-
+SECONDS=0
 main

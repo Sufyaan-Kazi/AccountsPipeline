@@ -61,7 +61,7 @@ abort()
 #
 createBQDataset(){
 ## Create the dataset and table
-  bq mk --location $REGION -d ${DATASET}
+  bq mk --location $BQ_REGION -d ${DATASET}
   bq mk -t ${DATASET}.${TABLE}
 
   # Give the service account permission on the dataset using the generic file

@@ -7,6 +7,7 @@ main() {
 
   # Do stuff
   enableAPIS
+  #getCredentials
   createServiceAccount
   createBQDataset
 }
@@ -31,16 +32,31 @@ abort()
 createBQDataset(){
 ## Create the dataset and table
   bq mk --location europe-west2 -d ${DATASET}
-  bq mk -t ${DATASET}.${STARLING_TABLE}
+  bq mk -t ${DATASET}.${TABLE}
 
   # Give the service account permission on the dataset using the generic file
   # Use sed to replace generic param text with the runtime variables
-  sed -e 's/DATASET/'"${DATASET}"'/g' bq.json | sed -e 's/SERVICE_ACC/'"${SERVICE_ACC}"'/g' | sed -e 's/PROJECT_ID/'"${PROJECT_ID}"'/g' | sed -e 's/TABLE/'"${STARLING_TABLE}"'/g' > bq_${DATE}.json
+  sed -e 's/DATASET/'"${DATASET}"'/g' bq.json | sed -e 's/SERVICE_ACC/'"${SERVICE_ACC}"'/g' | sed -e 's/PROJECT_ID/'"${PROJECT_ID}"'/g' | sed -e 's/TABLE/'"${TABLE}"'/g' > bq_${DATE}.json
   bq update --source ./bq_${DATE}.json ${PROJECT_ID}:${DATASET}
 
   # Tidy up
   rm bq_${DATE}.json
-  bq show --format=prettyjson ${DATASET}
+  #bq show --format=prettyjson ${DATASET}
+}
+
+#
+# get Credentials for default compute service account
+#
+getCredentials() {
+  SERVICE_ACC=$(gcloud iam service-accounts list | grep '\-compute\@' | xargs | cut -d " " -f6)
+  echo "Getting key for $SERVICE_ACC"
+  gcloud iam service-accounts keys create $KEY_FILE --iam-account $SERVICE_ACC
+
+  mv ${KEY_FILE} ${KEY_DIR}
+
+  #Store the key in env variable
+  export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
+  echo ${GOOGLE_APPLICATION_CREDENTIALS}
 }
 
 #
@@ -58,12 +74,18 @@ createServiceAccount() {
     gcloud iam service-accounts create ${KEY_NAME} --display-name=${KEY_NAME}
 
     # Add Role Policy Bindings
+    # Dataflow needs to create and then delete temp objects so we give admin in lieu of creating a user defined role
+    echo "*** Adding Role Policy Bindings ***"
     declare -a roles=(${SERVICE_ACC_ROLES})
     for role in "${roles[@]}"
     do
       echo "Adding role: ${role} to service account $SERVICE_ACC"
-      gcloud projects add-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet
+      gcloud projects add-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet > /dev/null || true
     done
+
+    # We need a few seconds for the policies to propogate ot the bucket and other resources
+    echo "*** Waiting for Policy Bindings to Propogate ... ***"
+    sleep 15
 
     # create the key
     gcloud iam service-accounts keys create $KEY_FILE --iam-account ${SERVICE_ACC}.iam.gserviceaccount.com
@@ -72,7 +94,6 @@ createServiceAccount() {
 
     #Store the key in env variable
     export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
-
     echo ${GOOGLE_APPLICATION_CREDENTIALS}
   fi
 }
@@ -82,7 +103,7 @@ enableAPIS() {
   declare -a REQ_APIS=("iam" "compute" "dataflow" "logging" "storage-component" "storage-api" "bigquery" "pubsub")
 
   ENABLED_APIS=$(gcloud services list --enabled | grep -v NAME | sort | cut -d " " -f1)
-  echo "Current APIs enabled are: ${ENABLED_APIS}"
+  #echo "Current APIs enabled are: ${ENABLED_APIS}"
   for api in "${REQ_APIS[@]}"
   do
     EXISTS=$(echo ${ENABLED_APIS} | grep ${api} | wc -l)

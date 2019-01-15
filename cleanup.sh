@@ -32,6 +32,9 @@ removeDataset() {
 }
 
 removeServiceAcc(){
+  #Remove permissions from the bucket
+  #gsutil defacl ch -d ${SERVICE_ACC}.iam.gserviceaccount.com gs://${BUCKET_NAME}/
+
   #
   # Remove Service Account Roles
   #
@@ -42,7 +45,7 @@ removeServiceAcc(){
     for role in "${roles[@]}"
     do
       echo "Removing role: ${role} for service account: $SERVICE_ACC"
-      gcloud projects remove-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet
+      gcloud projects remove-iam-policy-binding ${PROJECT_ID} --member "serviceAccount:${SERVICE_ACC}.iam.gserviceaccount.com" --role "${role}" --quiet > /dev/null || true
     done
   fi
 

@@ -5,22 +5,22 @@ set -e
 export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
 
 #Java related args
-class=com.suf.dataflow.banking.AccountsPrePrep
-projectID=sufaccounts
+class=${MAIN_CLASS}
+projectID=${PROJECT_ID}
 maven_runner=direct-runner
-mappingFile=gs://sufbankdata/starling.config
+mappingFile=gs://${BUCKET_NAME}/${CONFIG_FILE}
 
 #GCS Bucket args
-sourceFolder=gs://sufbankdata/input/
-outputStarlingFolder=gs://sufbankdata/output/starling_accounts
-outputBarclaysFolder=gs://sufbankdata/output/barclays_accounts
+sourceFolder=gs://${BUCKET_NAME}/input/
+outputStarlingFolder=gs://${BUCKET_NAME}/output/starling_accounts
+outputBarclaysFolder=gs://${BUCKET_NAME}/output/barclays_accounts
 
 #BigQuery related args
-BQTable=${projectID}:sufbankingds.starlingtxns
+BQTable=${projectID}:${DATASET}.${TABLE}
 
 main() {
   mvn_args="--project=$projectID \
---tempLocation=gs://suftempbucket/staging \
+--tempLocation=gs://${TEMPBUCKET}/staging \
 --mappingFile=$mappingFile \
 --sourceFolder=$sourceFolder \
 --outputStarlingFolder=$outputStarlingFolder \
@@ -33,14 +33,14 @@ main() {
 }
 
 prepareConfigMapping() {
-  gsutil cp src/main/resources/starling.config gs://sufbankdata/
+  gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
 }
 
 prepareConfigMapping
-tidyUp gs://sufbankdata/output/
+tidyUp gs://${BUCKET_NAME}/output/
 tidyUp ${sourceFolder}
-gsutil -m cp -r gs://sufbankdata/starling/* ${sourceFolder}
-gsutil -m cp -r gs://sufbankdata/barclays/* ${sourceFolder}
+gsutil -m cp -r gs://${BUCKET_NAME}/starling/* ${sourceFolder}
+gsutil -m cp -r gs://${BUCKET_NAME}/barclays/* ${sourceFolder}
 
 set -e
 trap 'abort' 0

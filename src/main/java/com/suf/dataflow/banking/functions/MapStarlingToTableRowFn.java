@@ -33,6 +33,7 @@ public final class MapStarlingToTableRowFn extends DoFn<StarlingTransaction, Tab
   public void processElement(ProcessContext c) throws Exception {
     TableRow row = new TableRow();
 
+    row.set("source",StarlingTransaction.SOURCE);
     row.set("when", c.element().getWhen().toString());
     row.set("what", c.element().getWhat());
     row.set("who", c.element().getWho());

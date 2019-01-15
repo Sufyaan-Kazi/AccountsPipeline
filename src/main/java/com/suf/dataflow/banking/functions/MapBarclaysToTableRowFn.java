@@ -33,6 +33,7 @@ public final class MapBarclaysToTableRowFn extends DoFn<BarclaysTransaction, Tab
   public void processElement(ProcessContext c) throws Exception {
     TableRow row = new TableRow();
 
+    row.set("source", BarclaysTransaction.SOURCE);
     row.set("when", c.element().getWhen().toString());
     row.set("what", null);
     row.set("who", c.element().getWho());

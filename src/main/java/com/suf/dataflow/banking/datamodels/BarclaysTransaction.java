@@ -37,6 +37,7 @@ public class BarclaysTransaction implements Serializable, BankTransaction {
     private String who = null;
     private String category = null;
     private Float amount = null;
+    public static final String SOURCE = "BARCLAYS";
 
     private BarclaysTransaction() {
         super();
@@ -94,7 +95,7 @@ public class BarclaysTransaction implements Serializable, BankTransaction {
 
     @Override
     public String toString() {
-        StringBuffer str = new StringBuffer();
+        StringBuffer str = new StringBuffer(SOURCE);
 
         str.append(getWhen()).append(",").append(getWho()).append(",").append(",");
         if (getCategory() != null) {
@@ -112,6 +113,7 @@ public class BarclaysTransaction implements Serializable, BankTransaction {
         final int prime = 31;
         int result = 1;
 
+        result = prime * result + SOURCE.hashCode();
         result = prime * result + ((when == null) ? 0 : when.hashCode());
         result = prime * result + ((who == null) ? 0 : who.hashCode());
         result = prime * result + ((category == null) ? 0 : category.hashCode());

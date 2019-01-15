@@ -164,14 +164,14 @@ public class AccountsPrePrep {
                         PCollection<TableRow> starlingTblRows = starlingTxns.apply("MapStarlingToBQRows",
                                         ParDo.of(new MapStarlingToTableRowFn()));
                         starlingTblRows.apply("InsertStarlingBQRows", BigQueryIO.writeTableRows()
-                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getBQSchema())
                                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
                                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
 
                         PCollection<TableRow> barclaysTblRows = barclaysTxns.apply("MapBarclaysToBQRows",
                                         ParDo.of(new MapBarclaysToTableRowFn()));
                         barclaysTblRows.apply("InsertBarclaysBQRows", BigQueryIO.writeTableRows()
-                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getStarlingBQSchema())
+                                        .to(options.getBQTable()).withSchema(BQSchemaFactory.getBQSchema())
                                         .withCreateDisposition(BigQueryIO.Write.CreateDisposition.CREATE_IF_NEEDED)
                                         .withWriteDisposition(BigQueryIO.Write.WriteDisposition.WRITE_TRUNCATE));
 

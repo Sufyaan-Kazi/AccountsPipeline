@@ -38,6 +38,7 @@ public class StarlingTransaction implements Serializable, BankTransaction {
     private String category = null;
     private Float amount = null;
     private Float balance = null;
+    public static final String SOURCE = "STARLING";
 
     private StarlingTransaction() {
         super();
@@ -93,7 +94,7 @@ public class StarlingTransaction implements Serializable, BankTransaction {
 
     @Override
     public String toString() {
-        StringBuffer str = new StringBuffer();
+        StringBuffer str = new StringBuffer(SOURCE);
 
         str.append(getWhen()).append(",").append(getWho()).append(",").append(getWhat()).append(",").append(getType())
                 .append(",");
@@ -112,6 +113,7 @@ public class StarlingTransaction implements Serializable, BankTransaction {
         final int prime = 31;
         int result = 1;
 
+        result = prime * result + SOURCE.hashCode();
         result = prime * result + ((when == null) ? 0 : when.hashCode());
         result = prime * result + ((who == null) ? 0 : who.hashCode());
         result = prime * result + ((what == null) ? 0 : what.hashCode());

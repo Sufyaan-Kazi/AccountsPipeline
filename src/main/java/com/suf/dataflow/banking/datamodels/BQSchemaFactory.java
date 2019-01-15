@@ -26,9 +26,10 @@ import com.google.api.services.bigquery.model.TableSchema;
 public class BQSchemaFactory {
   private static TableSchema starlingSchema = null;
 
-  public static TableSchema getStarlingBQSchema() {
+  public static TableSchema getBQSchema() {
     if (starlingSchema == null) {
       List<TableFieldSchema> fields = new ArrayList<>();
+      fields.add(new TableFieldSchema().setName("source").setType("STRING"));
       fields.add(new TableFieldSchema().setName("when").setType("DATE"));
       fields.add(new TableFieldSchema().setName("what").setType("STRING"));
       fields.add(new TableFieldSchema().setName("who").setType("STRING"));

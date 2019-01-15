@@ -29,13 +29,10 @@ set -e
 . ./common.sh
 
 export GOOGLE_APPLICATION_CREDENTIALS=${KEY_DIR}/${KEY_FILE}
+
 class=${MAIN_CLASS}
-maven_runner=dataflow-runner
 projectID=${PROJECT_ID}
 mappingFile=gs://${BUCKET_NAME}/${CONFIG_FILE}
-runner=DataflowRunner
-region=${DF_REGION}
-zone=${DF_ZONE}
 
 #GCS Bucket args
 sourceFolder=gs://${BUCKET_NAME}/input/
@@ -46,8 +43,18 @@ outputBarclaysFolder=gs://${BUCKET_NAME}/output/barclays_accounts
 BQTable=${projectID}:${DATASET}.${TABLE}
 
 main() {
+  # Copy Config
   gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
 
+  #Map input args into required args for Dataflow or Direct runnner
+  processArgs $@
+
+  mvn -P$maven_runner compile exec:java \
+      -Dexec.mainClass=$class \
+      -Dexec.args="${mvn_args}"
+}
+
+buildDFlowMavenArgs() {
   mvn_args="--project=$projectID \
 --runner=$runner \
 --tempLocation=gs://${TEMPBUCKET}/staging \
@@ -59,12 +66,45 @@ main() {
 --outputStarlingFolder=$outputStarlingFolder \
 --outputBarclaysFolder=$outputBarclaysFolder \
 --BQTable=$BQTable"
-         
-  mvn -P$maven_runner compile exec:java \
-      -Dexec.mainClass=$class \
-      -Dexec.args="${mvn_args}"
+}
+
+buildDirectArgs() {
+  maven_runner=direct-runner
+
+  mvn_args="--project=$projectID \
+--tempLocation=gs://${TEMPBUCKET}/staging \
+--mappingFile=$mappingFile \
+--sourceFolder=$sourceFolder \
+--outputStarlingFolder=$outputStarlingFolder \
+--BQTable=$BQTable \
+--outputBarclaysFolder=$outputBarclaysFolder"
+}
+
+processArgs() {
+  if [ "$#" -eq 0 ]
+  then
+    buildDirectArgs
+  else
+    maven_runner=dataflow-runner
+    runner=DataflowRunner
+    region=${DF_REGION}
+    zone=${DF_ZONE}
+    buildDFlowMavenArgs
+  fi
 }
 
 trap 'abort' 0
-main
+
+if [ "$#" -eq 0 ]
+then
+  echo "No arguments supplied, so this pipeline will be run in direct mode"
+  echo "To run on dataflow please launch again with a param, e.g. $0 blah"
+  echo ""
+else
+  echo "Arguments supplied, so this pipeline will be run in dataflow mode"
+  echo "To run in direct mode please launch again with no params, e.g. $0"
+  echo ""
+fi
+
+main $@
 trap : 0

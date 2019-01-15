@@ -24,6 +24,7 @@
 #  - Creates the dataset in BigQuery
 
 set -e
+. ./common.sh
 
 main() {
   # Read in Vars
@@ -34,20 +35,7 @@ main() {
   #getCredentials
   createServiceAccount
   createBQDataset
-}
-
-#
-# Handle an error in the script
-#
-abort()
-{
-  echo >&2 '
-  ***************
-  *** ABORTED ***
-  ***************
-  '
-  echo "An error occurred. Exiting..." >&2
-  exit 1
+  freshenData
 }
 
 #
@@ -161,8 +149,24 @@ enableAPIS() {
   done
 }
 
+## Tidy up previous output and copy the source data
+freshenData() {
+  ditchBucket ${BUCKET_NAME}
+  ditchBucket ${TEMPBUCKET}
+
+  #In my proj, the source region is the same used for BigQuery, i.e. London
+  gsutil mb -c regional -l ${BQ_REGION} gs://${BUCKET_NAME}/
+  gsutil mb -c regional -l ${BQ_REGION} gs://${TEMPBUCKET}/
+
+  echo "Assigning read permissions to ${SERVICE_ACC} on gs://${SRC_BUCKET_NAME}"
+  gsutil -m acl ch -R -u ${SERVICE_ACC}.iam.gserviceaccount.com:READ gs://${SRC_BUCKET_NAME}/ > /dev/null 2>&1
+  echo "Copying source files into this project."
+  gsutil -m cp -r gs://${SRC_BUCKET_NAME}/starling/* gs://${BUCKET_NAME}/${INPUT_FOLDER}
+  gsutil -m cp -r gs://${SRC_BUCKET_NAME}/barclays/* gs://${BUCKET_NAME}/${INPUT_FOLDER}
+}
+
 trap 'abort' 0
 SECONDS=0
 main
 trap : 0
-echo "Project Setup Complete in ${SECONDS} seconds."
+printf "\nProject Setup Complete in ${SECONDS} seconds.\n"

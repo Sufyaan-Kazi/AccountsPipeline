@@ -25,6 +25,7 @@
 # The script will print it's execution time in seconds and use UNIX trap to capture errors during execution
 
 set -e
+. ./common.sh
 
 #Main logic
 main() {
@@ -36,26 +37,17 @@ main() {
 
   removeServiceAcc 
   removeDataset 
+  ditchBucket ${BUCKET_NAME}
+  ditchBucket ${TEMPBUCKET}
 
   trap : 0
   echo "Project Cleanup Complete in ${SECONDS} seconds."
 }
 
-#Handle error
-abort()
-{
-  echo >&2 '
-  ***************
-  *** ABORTED ***
-  ***************
-  '
-  echo "An error occurred. Exiting..." >&2
-  exit 1
-}
 
 #Remove the dataset from BigQuery
 removeDataset() {
-  echo "Removing Dataset: " ${DATASET}
+  printf "\n*** Removing Dataset ${DATASET} ***\n"
   bq rm -rf ${DATASET}
 }
 
@@ -64,8 +56,11 @@ removeDataset() {
 # - Assuming it does, it removes the policy bindings for any roles listed in vars.txt for this service account
 # - Then it deletes the service account
 removeServiceAcc(){
+  printf "\n*** Removing Service Account ${SERVICE_ACC} ***\n"
+
   #Remove permissions from the bucket
-  #gsutil defacl ch -d ${SERVICE_ACC}.iam.gserviceaccount.com gs://${BUCKET_NAME}/
+  echo "Removing permissions on gs://${SRC_BUCKET_NAME}"
+  gsutil -m acl ch -R -d ${SERVICE_ACC}.iam.gserviceaccount.com gs://${SRC_BUCKET_NAME}/ > /dev/null 2>&1
 
   #
   # Remove Service Account Roles

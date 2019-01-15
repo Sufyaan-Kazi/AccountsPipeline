@@ -34,7 +34,9 @@ SERVICE_ACC_ROLES="roles/storage.admin roles/storage.objectAdmin roles/storage.o
 APIS="iam compute dataflow logging storage-component storage-api bigquery pubsub"
 
 #The bucket where the bulk of processing will occu
-BUCKET_NAME=sufbankdata
+SRC_BUCKET_NAME=sufbankdata
+INPUT_FOLDER=input
+BUCKET_NAME=$KEY_NAME
 TEMPBUCKET=suftempbucket
 
 #The region to create the BigQuery entitie sin

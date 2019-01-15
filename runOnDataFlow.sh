@@ -46,14 +46,7 @@ outputBarclaysFolder=gs://${BUCKET_NAME}/output/barclays_accounts
 BQTable=${projectID}:${DATASET}.${TABLE}
 
 main() {
-  prepareConfigMapping
-  tidyUp gs://${BUCKET_NAME}/output/
-
-  tidyUp ${sourceFolder}
-  gsutil -m cp -r gs://${BUCKET_NAME}/starling/* ${sourceFolder}
-  gsutil -m cp -r gs://${BUCKET_NAME}/barclays/* ${sourceFolder}
-
-  trap 'abort' 0
+  gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
 
   mvn_args="--project=$projectID \
 --runner=$runner \
@@ -70,13 +63,8 @@ main() {
   mvn -P$maven_runner compile exec:java \
       -Dexec.mainClass=$class \
       -Dexec.args="${mvn_args}"
-
-  trap : 0
 }
 
-prepareConfigMapping() {
-  gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
-}
-
-SECONDS=0
+trap 'abort' 0
 main
+trap : 0

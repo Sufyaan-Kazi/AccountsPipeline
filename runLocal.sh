@@ -52,18 +52,7 @@ BQTable=${projectID}:${DATASET}.${TABLE}
 main() {
   printf "\n ** Getting Ready to execute **\n"
   # Copy the config mapping to GCS
-  prepareConfigMapping
-
-  ##Remove previous output locally and on GCS
-  tidyUp gs://${BUCKET_NAME}/output/
-  tidyUp ${sourceFolder}
-  gsutil -m cp -r gs://${BUCKET_NAME}/starling/* ${sourceFolder}
-  gsutil -m cp -r gs://${BUCKET_NAME}/barclays/* ${sourceFolder}
-
-  #Since the tidy up process may throw errors if there is nothing to actually tidy up,
-  #we only start trapping for errors here
-  set -e
-  trap 'abort' 0
+  gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
 
   printf "\n\n*** About to launch pipeline ***\n"
 
@@ -80,12 +69,8 @@ main() {
   mvn -P$maven_runner compile exec:java \
       -Dexec.mainClass=$class \
       -Dexec.args="${mvn_args}"
-
-  trap : 0
 }
 
-prepareConfigMapping() {
-  gsutil cp src/main/resources/${CONFIG_FILE} gs://${BUCKET_NAME}/
-}
-
+trap 'abort' 0
 main
+trap : 0

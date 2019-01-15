@@ -28,8 +28,29 @@ tidyUp() {
     exit 1
   fi
   set +e
-  echo "Performing TidyUp"
+  echo "Deleting Bucket $1"
   rm -rf ./output/
-  gsutil -m rm -r $1/*
+  ditchBucket $1/*
   set -e
+}
+
+ditchBucket() {
+  echo "*** Removing bucket: gs://${1}/ ***"
+  gsutil -m rm -f -r gs://${1}/* || true > /dev/null 2>&1
+  gsutil rb -f gs://${1}/ || true > /dev/null 2>&1
+}
+
+#
+# Handle an error in the script
+#
+abort()
+{
+  echo >&2 '
+  ***************
+  *** ABORTED ***
+  ***************
+  '
+  echo "An error occurred. Exiting..." >&2
+  echo "${PROGNAME}: ${1:-"Unknown Error"}" 1>&2
+  exit 1
 }

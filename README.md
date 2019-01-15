@@ -8,16 +8,16 @@ This project executed via runPipeline.sh. If no arguments are supplied then the 
 
 This project behaviour is driven by parameters such as source and destination bucket locations, BigQuery table names etc, which are all defined in a config file (vars.txt).
 
-This project has a script called projSetup.sh which can be used to enable the required GCP API's to create the required service account and to create the BigQuery dataset/table. Similarly there is a script called cleanup.sh which removes the objects created for when a fresh start is needed.
+This project has a script called projSetup.sh which can be used to enable the required GCP API's to create the required service account and to create the BigQuery dataset/table and buckets. Similarly there is a script called cleanup.sh which removes the objects created for when a fresh start is needed.
 
 TO DO: Think about dataflow templates, amend from batch to streaming as well, use protobuf
 
-runLocal.sh or runOnDataFlow.sh are the main entry points. The shell/code does the following:
+runPipeline.sh is the main entry points. The script does the following:
 
 0) Delete previous output data from Google Cloud Storage (GCS)
 1) Copy input data (banking transactions) from the source project into the input gcs folders of this project it is executed in (this assumes data is taken from Barclays Bank and Starling Bank), and places the data into a single GCS folder
 2) Load the config which is used for the primitve category/type decision making
-3) Execute the pipeline
+3) Launch the Beam Pipeline on the desired runner.
 
 The Beam pipeline itself does the following:
 

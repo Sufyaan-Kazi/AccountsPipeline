@@ -2,17 +2,23 @@
 
 ![Graph](/docs/dflow.png)
 
+## TLDR
+The main class of this pipeline is: ```com.suf.dataflow.banking.AccountsPrePrep```
+The GCP buckets, service account and other config is created using: ```projSetup.sh```
+The pipeline can be executed in direct or dataflow mode using: ```runPipeline.sh``` or ```runPipeline.sh d```
+
+## More Detail
 This is a sample pipeline (to be used for education and inspiration purposes only) for processing financial data using Apache Beam. In this sample, personal banking transactions are processed so they can be inserted into BigQuery. The transaction data is filtered to remove bad data, then enhanced using primitive deduction work to infer the category or type of spending (e.g. groceries vs clothes shopping etc) and the data is then windowed on a day basis. 
 
-This project executed via runPipeline.sh. If no arguments are supplied then the script defaults to direct mode, otherwise if any argument is supplied it defaults to dataflow mode. 
+This project executed via ```runPipeline.sh```. If no arguments are supplied then the script defaults to direct mode, otherwise if any argument is supplied it defaults to dataflow mode. 
 
-This project behaviour is driven by parameters such as source and destination bucket locations, BigQuery table names etc, which are all defined in a config file (vars.txt).
+This project behaviour is driven by parameters such as source and destination bucket locations, BigQuery table names etc, which are all defined in a config file (```vars.txt```).
 
-This project has a script called projSetup.sh which can be used to enable the required GCP API's to create the required service account and to create the BigQuery dataset/table and buckets. Similarly there is a script called cleanup.sh which removes the objects created for when a fresh start is needed.
+This project has a script called ```projSetup.sh``` which can be used to enable the required GCP API's to create the required service account and to create the BigQuery dataset/table and buckets. Similarly there is a script called ```cleanup.sh``` which removes the objects created for when a fresh start is needed.
 
 TO DO: Think about dataflow templates, amend from batch to streaming as well, use protobuf
 
-runPipeline.sh is the main entry points. The script does the following:
+```runPipeline.sh``` is the main entry points. The script does the following:
 
 0) Delete previous output data from Google Cloud Storage (GCS)
 1) Copy input data (banking transactions) from the source project into the input gcs folders of this project it is executed in (this assumes data is taken from Barclays Bank and Starling Bank), and places the data into a single GCS folder

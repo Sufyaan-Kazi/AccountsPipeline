@@ -16,8 +16,6 @@ This project behaviour is driven by parameters such as source and destination bu
 
 This project has a script called ```projSetup.sh``` which can be used to enable the required GCP API's to create the required service account and to create the BigQuery dataset/table and buckets. Similarly there is a script called ```cleanup.sh``` which removes the objects created for when a fresh start is needed.
 
-TO DO: Think about dataflow templates, amend from batch to streaming as well, use protobuf
-
 ```runPipeline.sh``` is the main entry points. The script does the following:
 
 0) Delete previous output data from Google Cloud Storage (GCS)
@@ -35,3 +33,5 @@ The Beam pipeline itself does the following:
 When running on Dataflow, there will obviously be an initial delay while a worker is launched from scratch in order to execute the pipeline. You would get the same delay on your local machine in direct mode, if for example you turned the machine off first, then timed the it took to switch on your mchine, open a terminal, launch the app ...
 
 Because of the nature of Beam, there is no need in the code or the config to specify the number of threads, workers etc and/or the precise ordering of steps. The Beam runners will dynamically work this out, scaling up underlying compute resources as needed and re-balancing work between idle workers. In this way if there was a deluge of Barclays data then that part of the pipeline could be given more workers and indeed may be prioritised over Starling, the runner does this for me automatically. Also, Beam automatically handles the parrellisation for me to the constraints of the data and compute as needed.
+
+TO DO: Think about dataflow templates, amend from batch to streaming as well, use protobuf
